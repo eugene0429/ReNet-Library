@@ -3,8 +3,8 @@ import MinkowskiEngine as ME
 import numpy as np
 import torch.nn as nn
 import MinkowskiEngine.MinkowskiFunctional as MF
-from data_processing import data_processing as DP
-from model import EncoderBox, DecoderBox, Bridge, FinalDecoderBox, ConvBlock, DownConv, UpConv, FinalConv, PruningLayer, Net
+from utils.data_processing import data_processing as DP
+from learning.model import EncoderBox, DecoderBox, Bridge, FinalDecoderBox, ConvBlock, DownConv, UpConv, FinalConv, PruningLayer, Net
 
 class ConvBlock1(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels):

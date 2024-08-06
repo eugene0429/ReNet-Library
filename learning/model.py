@@ -1,7 +1,7 @@
 import torch
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from data_processing import data_processing as DP
+from utils.data_processing import data_processing as DP
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha=0.5):
