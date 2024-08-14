@@ -121,8 +121,7 @@ class Net(nn.Module):
         return x
 
 import MinkowskiEngine as ME
-from data_processing import data_processing as DP
-
+from utils.data_processing import data_processing as DP
 
 size = 8
 len = 4
@@ -156,8 +155,4 @@ s = conv2(s)
 g = upconv2(s)
 
 c = DP.concatenate_sparse_tensors(g, i, 1)
-
-print(i)
-print(g)
-print(c)
 
