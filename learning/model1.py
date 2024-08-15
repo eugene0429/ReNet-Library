@@ -3,7 +3,7 @@ import MinkowskiEngine.MinkowskiFunctional as MF
 from util.data_processing import DataProcess as DP
 
 class PruningLayer(ME.MinkowskiNetwork):
-    def __init__(self, in_channels, D, alpha=0.5):
+    def __init__(self, in_channels, D, alpha):
         super(PruningLayer, self).__init__(D)
         self.alpha = alpha
         self.likelihood_conv = ME.MinkowskiConvolution(in_channels, out_channels=1, kernel_size=1, stride=1, dimension=D)
@@ -127,7 +127,7 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
         return lh, x
 
 class Net1(ME.MinkowskiNetwork):
-    def __init__(self, in_channels, out_channels, D, alpha=0.5):
+    def __init__(self, in_channels, out_channels, D, alpha):
         super(Net1, self).__init__(D)
         self.ch = [2, 4, 8, 16, 32]
         self.enc1 = EncoderBox(in_channels, in_channels * self.ch[0], D) 

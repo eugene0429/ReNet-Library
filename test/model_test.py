@@ -6,17 +6,18 @@ from util.data_processing import DataProcess as DP
 from learning.model1 import Net1
 from learning.model2 import Net2
 
-len = 10
+len = 200
 len_half = len//2
 size = 64
 in_channel = 3
 out_channel = 3
 dimension = 4
+alpha = 0.5
 
 s = DP.create_random_sparse_tensor_4D(len, size, in_channel)
 
-net1 = Net1(in_channel, out_channel, dimension)
-net2 = Net2(in_channel, out_channel, dimension)
+net1 = Net1(in_channel, out_channel, dimension, alpha)
+net2 = Net2(in_channel, out_channel, dimension, alpha)
 
 _, a1 = net1(s)
 _, a2 = net2(s)
