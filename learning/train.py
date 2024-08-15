@@ -1,10 +1,14 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parents[1]))
+
 import torch
 import numpy as np
 import MinkowskiEngine as ME
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
-from data_processing import data_processing as DP
+from util.data_processing import DataProcess as DP
 from model import Net
 
 class VoxelDataset(Dataset):

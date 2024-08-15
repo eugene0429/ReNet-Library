@@ -5,8 +5,15 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
 
-class data_processing():
+class DataProcess():
     
+    @staticmethod
+    def check_sparse_tensor_shape(sparse_tensor):
+        print(sparse_tensor.C.shape[0])
+        dense_tensor, _, _ = sparse_tensor.dense()
+        print(dense_tensor.shape)
+        return True
+
     @staticmethod
     def sparse_to_dense_with_size(sparse_tensor, size):
         coordinates = sparse_tensor.C
@@ -100,7 +107,20 @@ class data_processing():
         )
 
         return out
-    
+
+    @staticmethod
+    def reduce_dimension(sparse_tensor, stride):
+        coords = sparse_tensor.C
+        feats = sparse_tensor.F
+        coords = coords[:, :-1].contiguous()
+        out = ME.SparseTensor(
+            features=feats, 
+            coordinates=coords, 
+            device=sparse_tensor.device,
+            tensor_stride=stride
+        )
+        return out
+
     @staticmethod
     def noisify_point_cloud(coo):
 
@@ -300,30 +320,58 @@ class data_processing():
 
         return np.array_equal(sorted_feats1, sorted_feats2), np.array_equal(sorted_coords1, sorted_coords2)
 
-def generate_stair_shape(num_steps, width, depth, height, points_per_step):
-    x_coords = []
-    y_coords = []
-    z_coords = []
-    
-    for i in range(num_steps):
-        z = (i + 1) * height
-        for w in np.linspace(0, width, points_per_step):
-            for d in np.linspace(i * depth, (i + 1) * depth, points_per_step):
-                x_coords.append(w)
-                y_coords.append(d)
-                z_coords.append(z)
+    def generate_stair_shape(num_steps, width, depth, height, points_per_step):
+        x_coords = []
+        y_coords = []
+        z_coords = []
+        
+        for i in range(num_steps):
+            z = (i + 1) * height
+            for w in np.linspace(0, width, points_per_step):
+                for d in np.linspace(i * depth, (i + 1) * depth, points_per_step):
+                    x_coords.append(w)
+                    y_coords.append(d)
+                    z_coords.append(z)
 
-        y = (i + 1) * depth
-        for w in np.linspace(0, width, points_per_step):
-            for h in np.linspace(i * height, (i + 1) * height, points_per_step):
-                x_coords.append(w)
-                y_coords.append(y)
-                z_coords.append(h)
+            y = (i + 1) * depth
+            for w in np.linspace(0, width, points_per_step):
+                for h in np.linspace(i * height, (i + 1) * height, points_per_step):
+                    x_coords.append(w)
+                    y_coords.append(y)
+                    z_coords.append(h)
 
-    return np.array([np.array(x_coords), np.array(y_coords), np.array(z_coords)])
+        return np.array([np.array(x_coords), np.array(y_coords), np.array(z_coords)])
 
-    
-DP = data_processing()
+    def create_random_sparse_tensor(len, size, feature_num, dimension):
+
+        coords = torch.randint(0, size, (len, dimension))
+        feats = torch.rand(len, feature_num)
+
+        coords, feats = ME.utils.sparse_collate([coords], [feats])
+
+        s = ME.SparseTensor(features=feats, coordinates=coords)
+
+        return s
+
+    def create_random_sparse_tensor_4D(len, size, feature_num, dimension=4):
+
+        coords = torch.randint(0, size, (len, dimension-1))
+        feats = torch.rand(len, feature_num)
+
+        new_col = torch.cat([
+            torch.zeros(len//2, 1, dtype=torch.int),
+            torch.ones(len//2, 1, dtype=torch.int)
+        ], dim=0)
+
+        coords = torch.cat([coords, new_col], dim=1)
+
+        coords, feats = ME.utils.sparse_collate([coords], [feats])
+
+        s = ME.SparseTensor(features=feats, coordinates=coords)
+
+        return s
+
+DP = DataProcess()
 
 num_steps = 8
 width = 3.2
