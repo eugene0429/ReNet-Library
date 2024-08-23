@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from util.data_processing import DataProcess as DP
+from util.data_processing import DataProcessing as DP
 
 class PruningLayer(nn.Module):
     def __init__(self, in_channels, alpha=0.5):
@@ -126,21 +126,5 @@ class Net(nn.Module):
         lh1, x = self.dec2(x, skip2)
         lh2, x = self.dec1(x, skip1)
         return x
-
-class UpConv(ME.MinkowskiNetwork):
-    def __init__(self, in_channels, out_channels, D):
-        super(UpConv, self).__init__(D)
-        self.up_conv = ME.MinkowskiGenerativeConvolutionTranspose(in_channels, out_channels, kernel_size=2, stride=1, dimension=D)
-        self.norm = ME.MinkowskiBatchNorm(out_channels)
-
-    def forward(self, x):
-        x = self.up_conv(x)
-        x = self.norm(x)
-        x = MF.relu(x)
-        return x
     
 s = DP.create_random_sparse_tensor(5, 4, 3, 3)
-print(s)
-c = UpConv(3, 3, 3)
-s = c(s)
-print(s)

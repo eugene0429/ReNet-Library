@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
 
-class DataProcess():
+class DataProcessing():
     
     @staticmethod
     def check_sparse_tensor_shape(sparse_tensor):
@@ -261,11 +261,6 @@ class DataProcess():
         ax.scatter(coo[:,0], coo[:,1], coo[:,2], c=coo[:,2], cmap='viridis', s=1)
 
         ax.grid(False)
-
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_zticks([])
-
         ax.axis('off')
 
         plt.show()
@@ -371,7 +366,7 @@ class DataProcess():
 
         return s
 
-DP = DataProcess()
+DP = DataProcessing()
 
 num_steps = 8
 width = 3.2

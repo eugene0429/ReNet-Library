@@ -8,8 +8,9 @@ import MinkowskiEngine as ME
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
-from util.data_processing import DataProcess as DP
-from model import Net
+from util.data_processing import DataProcessing as DP
+from learning.model1 import Net1
+from learning.model2 import Net2
 
 class VoxelDataset(Dataset):
     def __init__(self, data_now, data_previous):
@@ -27,7 +28,7 @@ class VoxelDataset(Dataset):
         coords1, feats1 = DP.voxelize_pc_with_time(pc1, 64, 1)
         coords = np.vstack(coords0, coords1)
         feats = np.vstack(feats0, feats1)
-        return coords, feats, targets 
+        return coords, feats, targets
 
 data0 = []
 data1 = []
@@ -35,7 +36,7 @@ dataset = VoxelDataset(data0, data1)
 batch_size = 2
 data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=ME.utils.batch_sparse_collate, shuffle=True)
 
-model = Net(3, 3, 4)
+model = Net1(3, 3, 4, 0.5)
 num_epochs = 100
 crit1 = torch.nn.MSELoss()
 crit2 = torch.nn.BCELoss()

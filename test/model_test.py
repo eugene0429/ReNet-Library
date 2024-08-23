@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
-from util.data_processing import DataProcess as DP
+from util.data_processing import DataProcessing as DP
 from learning.model1 import Net1
 from learning.model2 import Net2
 

@@ -1,6 +1,6 @@
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from util.data_processing import DataProcess as DP
+from util.data_processing import DataProcessing as DP
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
