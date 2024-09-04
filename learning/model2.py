@@ -91,11 +91,13 @@ class EncoderBox(ME.MinkowskiNetwork):
         self.down_conv = DownConv(out_channels, out_channels, D)
         self.pruning = PruningLayer_(D, stride)
 
-    def forward(self, x):
+    def forward(self, x, check):
         x = self.conv(x)
         skip = x
         skip = self.pruning(skip)
         x = self.down_conv(x)
+        if check:
+            DP.print_sparse_tensor_num_coords_and_shape(x)
         return skip, x
 
 class Bridge(ME.MinkowskiNetwork):
@@ -104,10 +106,12 @@ class Bridge(ME.MinkowskiNetwork):
         self.conv = BridgeConv(in_channels, out_channels, D)
         self.up_conv = UpConv(out_channels, out_channels, D-1)
 
-    def forward(self, x):
+    def forward(self, x, check):
         x = self.conv(x)
         x = DP.reduce_dimension(x, 16)
         x = self.up_conv(x)
+        if check:
+            DP.print_sparse_tensor_num_coords_and_shape(x)
         return x
 
 class DecoderBox(ME.MinkowskiNetwork):
@@ -118,11 +122,13 @@ class DecoderBox(ME.MinkowskiNetwork):
         self.up_conv = UpConv(out_channels, out_channels, D)
         self.stride = stride
 
-    def forward(self, x, skip_connection):
+    def forward(self, x, skip_connection, check):
         x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv(x)
         lh, x = self.pruning(x)
         x = self.up_conv(x)
+        if check:
+            DP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
 class FinalDecoderBox(ME.MinkowskiNetwork):
@@ -133,16 +139,18 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
         self.conv2 = FinalConv(mid_channels, out_channels, D)
         self.stride = stride
 
-    def forward(self, x, skip_connection):
+    def forward(self, x, skip_connection, check):
         x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
         lh, x = self.pruning(x)
         x = self.conv2(x)
+        if check:
+            DP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
-class Net2(ME.MinkowskiNetwork):
+class ReNet2(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels, D, alpha):
-        super(Net2, self).__init__(D)
+        super(ReNet2, self).__init__(D)
         self.ch = [2, 4, 8, 16, 32]
         self.enc1 = EncoderBox(in_channels, in_channels * self.ch[0], D, 1) 
         self.enc2 = EncoderBox(in_channels * self.ch[0], in_channels * self.ch[1], D, 2)
@@ -156,27 +164,17 @@ class Net2(ME.MinkowskiNetwork):
         self.dec2 = DecoderBox(in_channels * self.ch[2] + in_channels * self.ch[1], in_channels * self.ch[1], D-1, alpha, 2)
         self.dec1 = FinalDecoderBox(in_channels * self.ch[1] + in_channels * self.ch[0], in_channels * self.ch[0], out_channels, D-1, alpha, 1)
 
-    def forward(self, x):
-        DP.check_sparse_tensor_shape(x)
-        skip1, x = self.enc1(x) #[1,1,1], [2,2,2,1]
-        DP.check_sparse_tensor_shape(x)
-        skip2, x = self.enc2(x) #[2,2,2], [4,4,4,1]
-        DP.check_sparse_tensor_shape(x)
-        skip3, x = self.enc3(x) #[4,4,4], [8,8,8,1]
-        DP.check_sparse_tensor_shape(x)
-        skip4, x = self.enc4(x) #[8,8,8], [16,16,16,1]
-        DP.check_sparse_tensor_shape(x)
+    def forward(self, x, check=True):
+        skip1, x = self.enc1(x, check)
+        skip2, x = self.enc2(x, check)
+        skip3, x = self.enc3(x, check)
+        skip4, x = self.enc4(x, check)
 
-        x = self.bridge(x) #[8,8,8]
-        DP.check_sparse_tensor_shape(x)
+        x = self.bridge(x, check)
 
-        lh1, x = self.dec4(x, skip4) #[4,4,4]
-        DP.check_sparse_tensor_shape(x)
-        lh2, x = self.dec3(x, skip3) #[2,2,2]
-        DP.check_sparse_tensor_shape(x)
-        lh3, x = self.dec2(x, skip2) #[1,1,1]
-        DP.check_sparse_tensor_shape(x)
-        lh4, x = self.dec1(x, skip1) #[1,1,1]
-        DP.check_sparse_tensor_shape(x)
+        lh1, x = self.dec4(x, skip4, check)
+        lh2, x = self.dec3(x, skip3, check)
+        lh3, x = self.dec2(x, skip2, check)
+        lh4, x = self.dec1(x, skip1, check)
 
-        return [lh1, lh2, lh3, lh4], x
+        return x, [lh1, lh2, lh3, lh4]

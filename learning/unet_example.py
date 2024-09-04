@@ -1,8 +1,6 @@
 import torch
-
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-
 
 class UNet(ME.MinkowskiNetwork):
 
