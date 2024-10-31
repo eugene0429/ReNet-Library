@@ -157,7 +157,7 @@ class DataGeneration():
         if synthetic:
             positions = []
             yaws = []
-            for i in range(num_time_step):
+            for i in range(num_time_step + 1):
                 if i==0:
                     robot_position = np.array([random.uniform(-range_value, range_value), 
                                                random.uniform(-range_value, range_value), 
@@ -261,7 +261,7 @@ class DataGeneration():
 
         return in_range
 
-    def filter_points_in_detection_area(self, point_cloud, robot_config, use_yaw=True, visualize=True):
+    def filter_points_in_detection_area(self, point_cloud, robot_config, use_yaw=True, visualize=False):
         
         detection_range = robot_config['detection_range']
         robot_size = robot_config['size']
@@ -401,7 +401,7 @@ class DataGeneration():
         
         return point_cloud
 
-    def senser_detection(self, point_clouds, robot_config, visualize=True):
+    def senser_detection(self, point_clouds, robot_config, visualize=False):
         
         detection_range = robot_config['detection_range']
         robot_size = robot_config['size']
@@ -509,16 +509,15 @@ class DataGeneration():
 
         return True
     
-    def visualize_voxel(self, data, voxel_resolution):
+    @staticmethod
+    def visualize_voxel(data, voxel_resolution, batch_index=0, time_index=0):
 
         if not isinstance(data, torch.Tensor):
-            _data = np.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
+            _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
             coord = data.C
-            coord = coord.numpy()
-            x_coords = coord[:, 1]
-            y_coords = coord[:, 2]
-            z_coords = coord[:, 3]
-            _data[x_coords, y_coords, z_coords] = 1
+            mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
+            coord = coord[mask]
+            _data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
         else:
             _data = data
 
@@ -547,7 +546,7 @@ class DataGeneration():
             coords1, _ = self.voxelize_pc(ground_truth_1, size, time_index=1)
             coords = np.vstack([coords0, coords1])
             coords = torch.tensor(coords)
-            target = torch.zeros((size, size, size, 2), dtype=torch.int)
+            target = torch.zeros((size, size, size, 2), dtype=torch.float32)
             target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
             targets.append(target)
         
@@ -562,7 +561,8 @@ class DataGeneration():
                          point_density,
                          num_env_configs,
                          num_data_per_env,
-                         num_time_step=4):
+                         num_time_step,
+                         visualize=False):
 
         env_configs = self.generate_env_configs(grid_size,
                                                 point_density,
@@ -570,7 +570,7 @@ class DataGeneration():
         
         input_data_lists = {}
         target_lists = {}
-        for i in range(1, num_time_step):
+        for i in range(1, num_time_step + 1):
             input_data_lists[f'list_{i}'] = []
             target_lists[f'list_{i}'] = []
 
@@ -588,14 +588,14 @@ class DataGeneration():
                                                            sensors_config,
                                                            num_time_step)
                 
-                target = self.filter_points_in_detection_area(env, robot_config)
+                target = self.filter_points_in_detection_area(env, robot_config, visualize)
 
                 if target==None:
                     continue
                 
-                input = self.senser_detection(target, robot_config)
+                input = self.senser_detection(target, robot_config, visualize)
 
-                for i in range(1, num_time_step):
+                for i in range(1, num_time_step + 1):
                     input_data_lists[f'list_{i}'].append(input[i-1:i+1])
                     target_lists[f'list_{i}'].append(target[i-1:i+1])
 

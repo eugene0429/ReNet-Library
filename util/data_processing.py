@@ -36,7 +36,8 @@ class DataProcessing():
         
         return dense_tensor
 
-    def dense_to_sparse(self, dense_tensor):
+    @staticmethod
+    def dense_to_sparse(dense_tensor):
         if len(dense_tensor.shape) == 6:
             batch_size, channel_dimension, width, height, depth, time = dense_tensor.shape
 
@@ -79,6 +80,7 @@ class DataProcessing():
         non_zero_features = dense_tensor[non_zero_mask]
 
         sparse_tensor = ME.SparseTensor(features=non_zero_features.float(), coordinates=non_zero_coords.int())
+
         return sparse_tensor
 
     @staticmethod
@@ -107,6 +109,19 @@ class DataProcessing():
             device=tensor_A.device,
             tensor_stride=stride,
             coordinate_manager=tensor_A.coordinate_manager
+        )
+        return out
+    
+    @staticmethod
+    def generate_empty_sparse_tensor(sparse_tensor):
+        coords = sparse_tensor.C
+        feats = torch.zeros_like(sparse_tensor.F, dtype=torch.float32)
+        out = ME.SparseTensor(
+            features=feats, 
+            coordinates=coords, 
+            device=sparse_tensor.device,
+            tensor_stride=sparse_tensor.tensor_stride,
+            coordinate_manager=sparse_tensor.coordinate_manager
         )
         return out
 
@@ -145,7 +160,7 @@ class DataProcessing():
 
         if dimension==3.5:
             coords = torch.randint(0, size, (len, 3))
-            feats = torch.rand(len, num_feature)
+            feats = torch.rand(len, num_feature, dtype=torch.float32)
 
             new_col = torch.cat([
                 torch.zeros(len//2, 1, dtype=torch.int),

@@ -1,6 +1,8 @@
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
+import torch
 from util.data_processing import DataProcessing as DP
+from util.data_generation import DataGeneration as DG
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -12,8 +14,14 @@ class PruningLayer(ME.MinkowskiNetwork):
     def forward(self, x):
         likelihood_map = MF.sigmoid(self.likelihood_conv(x))
         mask = (likelihood_map.F >= self.alpha).squeeze()
+        print(mask.sum())
+        # if mask.sum()==0:
+        #     # if torch.isnan(likelihood_map.F).any():
+        #     #     print("NaN detected in likelihood_map.F")
+        #     pruned_features = DP.generate_empty_sparse_tensor(x)
+        # else:
         pruned_features = self.pruning(x, mask)
-        return likelihood_map, pruned_features
+        return pruned_features, likelihood_map
     
 class PruningLayer_(ME.MinkowskiNetwork):
     def __init__(self, D, alpha=1):
@@ -111,7 +119,7 @@ class DecoderBox(ME.MinkowskiNetwork):
     def forward(self, x, skip_connection, check):
         x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv(x)
-        lh, x = self.pruning(x)
+        x, lh = self.pruning(x)
         x = self.up_conv(x)
         if check:
             DP.print_sparse_tensor_num_coords_and_shape(x)
@@ -128,7 +136,7 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
     def forward(self, x, skip_connection, check):
         x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
-        lh, x = self.pruning(x)
+        x, lh = self.pruning(x)
         x = self.conv2(x)
         if check:
             DP.print_sparse_tensor_num_coords_and_shape(x)
