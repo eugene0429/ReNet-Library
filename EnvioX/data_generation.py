@@ -9,7 +9,7 @@ import torch
 import MinkowskiEngine as ME
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
-from util.data_processing import DataProcessing as DP
+from EnvioX.data_processing import DataProcessing as DP # type: ignore
 
 class DataGeneration():
 
@@ -147,16 +147,16 @@ class DataGeneration():
                                detection_range, 
                                robot_size, 
                                robot_speed, 
-                               sensors_config, 
-                               num_time_step, 
-                               synthetic=True, 
-                               time_step=0.1):
+                               sensors_config,
+                               time_step,
+                               num_time_step
+                               ):
         
         range_value = grid_size / 2 - detection_range
 
-        if synthetic:
-            positions = []
-            yaws = []
+        if time_step != None:
+            robot_positions = []
+            robot_yaws = []
             for i in range(num_time_step + 1):
                 if i==0:
                     robot_position = np.array([random.uniform(-range_value, range_value), 
@@ -164,19 +164,19 @@ class DataGeneration():
                                                robot_size[2]])
                     robot_yaw = random.uniform(-math.pi, math.pi)
 
-                    positions.append(robot_position)
-                    yaws.append(robot_yaw)
+                    robot_positions.append(robot_position)
+                    robot_yaws.append(robot_yaw)
                     
                 else:
                     direction_vector = np.array([np.cos(robot_yaw), np.sin(robot_yaw), 0])
                     robot_position = robot_position + robot_speed * direction_vector * time_step
                     robot_yaw = robot_yaw + random.uniform(-math.pi / 10, math.pi / 10)
                     
-                    positions.append(robot_position)
-                    yaws.append(robot_yaw)
+                    robot_positions.append(robot_position)
+                    robot_yaws.append(robot_yaw)
             
-            robot_config = {'position': positions,
-                            'yaw': yaws,
+            robot_config = {'position': robot_positions,
+                            'yaw': robot_yaws,
                             'detection_range': detection_range,
                             'size': robot_size,
                             'sensors': sensors_config
@@ -190,8 +190,8 @@ class DataGeneration():
                                        robot_size[2]])
             robot_yaw = random.uniform(- math.pi, math.pi)
             
-            robot_config = {'position': robot_position,
-                            'yaw': robot_yaw,
+            robot_config = {'position': [robot_position],
+                            'yaw': [robot_yaw],
                             'detection_range': detection_range,
                             'size': robot_size,
                             'sensors': sensors_config
@@ -261,7 +261,7 @@ class DataGeneration():
 
         return in_range
 
-    def filter_points_in_detection_area(self, point_cloud, robot_config, use_yaw=True, visualize=False):
+    def filter_points_in_detection_area(self, environment, robot_config, use_yaw=True, visualize=False):
         
         detection_range = robot_config['detection_range']
         robot_size = robot_config['size']
@@ -276,16 +276,16 @@ class DataGeneration():
             if not use_yaw:
                 robot_yaw = 0
             
-            if self._check_vaildation(point_cloud, robot_position, robot_size):
+            if self._check_vaildation(environment, robot_position, robot_size):
                 return None
 
-            translated_point_cloud = point_cloud[:, :2] - robot_position[:2]
+            translated_point_cloud = environment[:, :2] - robot_position[:2]
             
             rotated_point_cloud = self._rotate_vecter(vector=translated_point_cloud,
                                                     yaw=robot_yaw,
                                                     dimension=2)
 
-            rotated_point_cloud = np.hstack((rotated_point_cloud, point_cloud[:, 2:3]))
+            rotated_point_cloud = np.hstack((rotated_point_cloud, environment[:, 2:3]))
             
             x_min = -detection_range / 2
             x_max = detection_range / 2
@@ -309,10 +309,7 @@ class DataGeneration():
 
             points.append(filtered_points)
 
-        if len(points)==1:
-            return points[0]
-        else:
-            return points
+        return points
     
     def _is_in_fov(self, 
                    point, 
@@ -342,19 +339,19 @@ class DataGeneration():
         sensors = [
             {'position': positions['front'],
              'direction': [horizontal_component, 0.0, -vertical_component],
-             'fov': fov_angle_rad, 
+             'fov': fov_angle_rad,
              'max_distance': detection_distance},
             {'position': positions['back'],
-             'direction': [-horizontal_component, 0.0, -vertical_component], 
-             'fov': fov_angle_rad, 
+             'direction': [-horizontal_component, 0.0, -vertical_component],
+             'fov': fov_angle_rad,
              'max_distance': detection_distance},
-            {'position': positions['right'], 
-             'direction': [0.0, -horizontal_component, -vertical_component], 
-             'fov': fov_angle_rad, 
+            {'position': positions['right'],
+             'direction': [0.0, -horizontal_component, -vertical_component],
+             'fov': fov_angle_rad,
              'max_distance': detection_distance},
-            {'position': positions['left'], 
-             'direction': [0.0, horizontal_component, -vertical_component], 
-             'fov': fov_angle_rad, 
+            {'position': positions['left'],
+             'direction': [0.0, horizontal_component, -vertical_component],
+             'fov': fov_angle_rad,
              'max_distance': detection_distance},
         ]
 
@@ -445,7 +442,7 @@ class DataGeneration():
                 detected_points = np.vstack([detected_points, np.array([robot_position[0], robot_position[1], detection_range])])
 
             points.append(detected_points)
-
+        
         return points
     
     def voxelize_pc(self, point_cloud, voxel_resolution, time_index):
@@ -467,6 +464,9 @@ class DataGeneration():
                 coords = np.hstack((voxel_keys, np.zeros((len(voxel_keys), 1), dtype=np.int32)))
             elif time_index == 1:
                 coords = np.hstack((voxel_keys, np.ones((len(voxel_keys), 1), dtype=np.int32)))
+            else:
+                print("time index should be 1 or 2")
+                return None
 
         centroids = np.array([points_scaled[inverse_indices == i].mean(axis=0) for i in range(len(voxel_keys))])
         centroids = centroids % 1
@@ -495,31 +495,30 @@ class DataGeneration():
 
         return sparse_tensor
     
-    def visualize_pc(self, point_cloud):
+    def visualize_pc(self, point_clouds):
+        
+        for i in range(len(point_clouds)):
+            point_cloud = point_clouds[i]
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
 
-        ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
+            ax.grid(False)
+            ax.axis('off')
 
-        ax.grid(False)
-        ax.axis('off')
-
-        plt.show()
+            plt.show()
 
         return True
     
     @staticmethod
-    def visualize_voxel(data, voxel_resolution, batch_index=0, time_index=0):
+    def visualize_sparse_tensor(data, voxel_resolution, batch_index=0, time_index=0):
 
-        if not isinstance(data, torch.Tensor):
-            _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
-            coord = data.C
-            mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
-            coord = coord[mask]
-            _data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
-        else:
-            _data = data
+        _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
+        coord = data.C
+        mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
+        coord = coord[mask]
+        _data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -533,6 +532,23 @@ class DataGeneration():
 
         return True
     
+    def visualize_voxel(self, data, voxel_resolution):
+
+        _data = np.zeros([voxel_resolution, voxel_resolution, voxel_resolution])
+        _data[data[:, 0], data[:, 1], data[:, 2]] = 1
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        ax.voxels(_data, edgecolor='k')
+
+        ax.grid(False)
+        ax.axis('off')
+
+        plt.show()
+
+        return True
+
     def genarate_target(self, ground_truth_0, ground_truth_1):
 
         targets = []
@@ -561,6 +577,7 @@ class DataGeneration():
                          point_density,
                          num_env_configs,
                          num_data_per_env,
+                         time_step,
                          num_time_step,
                          visualize=False):
 
@@ -586,6 +603,7 @@ class DataGeneration():
                                                            robot_size,
                                                            robot_speed,
                                                            sensors_config,
+                                                           time_step,
                                                            num_time_step)
                 
                 target = self.filter_points_in_detection_area(env, robot_config, visualize)

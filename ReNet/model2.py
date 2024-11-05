@@ -1,6 +1,6 @@
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from ..util.data_processing import DataProcessing as DP
+from ..EnvioX.data_processing import DataProcessing as DP
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -148,9 +148,9 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
             DP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
-class ReNet2(ME.MinkowskiNetwork):
+class ReNet(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels, D, alpha):
-        super(ReNet2, self).__init__(D)
+        super(ReNet, self).__init__(D)
         self.ch = [2, 4, 8, 16, 32]
         self.enc1 = EncoderBox(in_channels, in_channels * self.ch[0], D, 1) 
         self.enc2 = EncoderBox(in_channels * self.ch[0], in_channels * self.ch[1], D, 2)

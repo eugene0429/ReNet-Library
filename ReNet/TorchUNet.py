@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from ..util.data_processing import DataProcessing as DP
+from EnvioX.data_processing import DataProcessing as DP # type: ignore
 
 class PruningLayer(nn.Module):
     def __init__(self, in_channels, alpha=0.5):

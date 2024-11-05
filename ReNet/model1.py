@@ -1,7 +1,11 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parents[1]))
+
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from ..util.data_processing import DataProcessing as DP
-from ..util.data_generation import DataGeneration as DG
+from EnvioX.data_processing import DataProcessing as DP # type: ignore
+from EnvioX.data_generation import DataGeneration as DG # type: ignore
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -14,12 +18,6 @@ class PruningLayer(ME.MinkowskiNetwork):
     def forward(self, x):
         likelihood_map = MF.sigmoid(self.likelihood_conv(x))
         mask = (likelihood_map.F >= self.alpha).squeeze()
-        print(mask.sum())
-        # if mask.sum()==0:
-        #     # if torch.isnan(likelihood_map.F).any():
-        #     #     print("NaN detected in likelihood_map.F")
-        #     pruned_features = DP.generate_empty_sparse_tensor(x)
-        # else:
         pruned_features = self.pruning(x, mask)
         return pruned_features, likelihood_map
     
@@ -142,9 +140,9 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
             DP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
-class ReNet1(ME.MinkowskiNetwork):
+class ReNet(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels, D, alpha):
-        super(ReNet1, self).__init__(D)
+        super(ReNet, self).__init__(D)
         self.ch = [2, 4, 8, 16, 32]
         self.enc1 = EncoderBox(in_channels, in_channels * self.ch[0], D) 
         self.enc2 = EncoderBox(in_channels * self.ch[0], in_channels * self.ch[1], D)
