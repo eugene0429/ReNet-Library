@@ -1,6 +1,6 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parents[1]))
+# import sys
+# from pathlib import Path
+# sys.path.append(str(Path(__file__).parents[1]))
 
 import torch
 import torch.nn as nn
@@ -10,10 +10,10 @@ from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
 from sklearn.metrics import precision_score, recall_score, f1_score
-from util.data_generation import DataGeneration
-from util.data_processing import DataProcessing
-from learning.model1 import ReNet1
-from learning.model2 import ReNet2
+from ..util.data_generation import DataGeneration
+from ..util.data_processing import DataProcessing
+from ..learning.model1 import ReNet1
+from ..learning.model2 import ReNet2
 
 DG = DataGeneration()
 DP = DataProcessing()

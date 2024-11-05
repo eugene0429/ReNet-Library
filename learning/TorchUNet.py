@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from util.data_processing import DataProcessing as DP
+from ..util.data_processing import DataProcessing as DP
 
 class PruningLayer(nn.Module):
     def __init__(self, in_channels, alpha=0.5):
@@ -126,5 +126,3 @@ class Net(nn.Module):
         lh1, x = self.dec2(x, skip2)
         lh2, x = self.dec1(x, skip1)
         return x
-    
-s = DP.create_random_sparse_tensor(5, 4, 3, 3)

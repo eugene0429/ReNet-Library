@@ -1,11 +1,11 @@
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-import torch
-from util.data_processing import DataProcessing as DP
-from util.data_generation import DataGeneration as DG
+from ..util.data_processing import DataProcessing as DP
+from ..util.data_generation import DataGeneration as DG
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
+        
         super(PruningLayer, self).__init__(D)
         self.alpha = alpha
         self.likelihood_conv = ME.MinkowskiConvolution(in_channels, out_channels=1, kernel_size=1, stride=1, dimension=D)
