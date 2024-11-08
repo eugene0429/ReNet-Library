@@ -20,7 +20,7 @@ Features
 
 - terrain point cloud & voxel data **detected by sansors on a robot** (noisy, blinded)
 
-  <img width="150" alt="스크린샷 2024-11-09 오전 12 07 03" src="https://github.com/user-attachments/assets/f4d75f0e-f2e0-4940-98ee-747c740903c1"> <img width="145" alt="스크린샷 2024-11-09 오전 12 08 11" src="https://github.com/user-attachments/assets/e92daf55-d047-46b1-9e6f-4373c2f584f1">
+  <img width="250" alt="스크린샷 2024-11-09 오전 12 07 03" src="https://github.com/user-attachments/assets/f4d75f0e-f2e0-4940-98ee-747c740903c1"> <img width="245" alt="스크린샷 2024-11-09 오전 12 08 11" src="https://github.com/user-attachments/assets/e92daf55-d047-46b1-9e6f-4373c2f584f1">
 
 - point cloud & voxel data Visualizer
 
