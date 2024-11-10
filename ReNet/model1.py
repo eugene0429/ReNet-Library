@@ -7,9 +7,10 @@ import MinkowskiEngine.MinkowskiFunctional as MF
 from EnvioX.data_processing import DataProcessing as DP # type: ignore
 from EnvioX.data_generation import DataGeneration as DG # type: ignore
 
+import torch
+
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
-        
         super(PruningLayer, self).__init__(D)
         self.alpha = alpha
         self.likelihood_conv = ME.MinkowskiConvolution(in_channels, out_channels=1, kernel_size=1, stride=1, dimension=D)
@@ -71,13 +72,26 @@ class UpConv(ME.MinkowskiNetwork):
         x = MF.relu(x)
         return x
 
-class FinalConv(ME.MinkowskiNetwork):
+class FinalConv1(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels, D):
-        super(FinalConv, self).__init__(D)
-        self.conv = ME.MinkowskiConvolution(in_channels, out_channels, kernel_size=3, stride=(1,1,1,2), dimension=D)
+        super(FinalConv1, self).__init__(D)
+        self.conv = ME.MinkowskiConvolution(in_channels, out_channels, kernel_size=2, stride=(1,1,1,2), dimension=D)
+        self.norm = ME.MinkowskiBatchNorm(out_channels)
 
     def forward(self, x):
         x = self.conv(x)
+        x = self.norm(x)
+        return x
+    
+class FinalConv2(ME.MinkowskiNetwork):
+    def __init__(self, in_channels, out_channels, D):
+        super(FinalConv2, self).__init__(D)
+        self.conv = ME.MinkowskiConvolution(in_channels, out_channels, kernel_size=1, stride=1, dimension=D)
+        self.norm = ME.MinkowskiBatchNorm(out_channels)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.norm(x)
         return x
 
 class EncoderBox(ME.MinkowskiNetwork):
@@ -123,18 +137,36 @@ class DecoderBox(ME.MinkowskiNetwork):
             DP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
-class FinalDecoderBox(ME.MinkowskiNetwork):
+class FinalDecoderBox1(ME.MinkowskiNetwork):
     def __init__(self, in_channels, mid_channels, out_channels, D, alpha, stride):
-        super(FinalDecoderBox, self).__init__(D)
+        super(FinalDecoderBox1, self).__init__(D)
         self.conv1 = Conv(in_channels, mid_channels, D)
         self.pruning = PruningLayer(mid_channels, D, alpha)
-        self.conv2 = FinalConv(mid_channels, out_channels, D)
+        self.conv2 = FinalConv1(mid_channels, out_channels, D)
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
         x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
         x, lh = self.pruning(x)
+        x = self.conv2(x)
+        if check:
+            DP.print_sparse_tensor_num_coords_and_shape(x)
+        return lh, x
+    
+class FinalDecoderBox2(ME.MinkowskiNetwork):
+    def __init__(self, in_channels, mid_channels, out_channels, D, alpha, stride):
+        super(FinalDecoderBox2, self).__init__(D)
+        self.conv1 = Conv(in_channels, mid_channels, D)
+        self.pruning = PruningLayer(mid_channels, D, alpha)
+        self.conv2 = FinalConv2(2 * mid_channels, out_channels, D-1)
+        self.stride = stride
+
+    def forward(self, x, skip_connection, check):
+        x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = self.conv1(x)
+        x, lh = self.pruning(x)
+        x = DP.concatenate_over_time_dimension(x)
         x = self.conv2(x)
         if check:
             DP.print_sparse_tensor_num_coords_and_shape(x)
@@ -154,7 +186,7 @@ class ReNet(ME.MinkowskiNetwork):
         self.dec4 = DecoderBox(in_channels * self.ch[4] + in_channels * self.ch[3], in_channels * self.ch[3], D, alpha, (8,8,8,1))
         self.dec3 = DecoderBox(in_channels * self.ch[3] + in_channels * self.ch[2], in_channels * self.ch[2], D, alpha, (4,4,4,1))
         self.dec2 = DecoderBox(in_channels * self.ch[2] + in_channels * self.ch[1], in_channels * self.ch[1], D, alpha, (2,2,2,1))
-        self.dec1 = FinalDecoderBox(in_channels * self.ch[1] + in_channels * self.ch[0], in_channels * self.ch[0], out_channels, D, alpha, 1)
+        self.dec1 = FinalDecoderBox1(in_channels * self.ch[1] + in_channels * self.ch[0], in_channels * self.ch[0], out_channels, D, alpha, 1)
 
     def forward(self, x, check=False):
 

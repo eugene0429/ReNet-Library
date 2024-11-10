@@ -511,8 +511,7 @@ class DataGeneration():
 
         return True
     
-    @staticmethod
-    def visualize_sparse_tensor(data, voxel_resolution, batch_index=0, time_index=0):
+    def visualize_sparse_tensor(self, data, voxel_resolution, batch_index=0, time_index=0):
 
         _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
         coord = data.C

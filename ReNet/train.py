@@ -6,14 +6,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 import MinkowskiEngine as ME
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torch.optim as optim
-from torch.optim.lr_scheduler import ExponentialLR
 from sklearn.metrics import precision_score, recall_score, f1_score
 from EnvioX.data_generation import DataGeneration # type: ignore
 from EnvioX.data_processing import DataProcessing # type: ignore
-from ReNet.model1 import ReNet as ReNet1 # type: ignore
-from ReNet.model2 import ReNet as ReNet2 # type: ignore
 
 DG = DataGeneration()
 DP = DataProcessing()
@@ -69,7 +66,7 @@ def ReNet_collate_fn(batch):
     
     return (coords, feats), (final_targets, list_of_targets)
 
-def train(model, dataloaders, optimizer, scheduler, num_epochs):
+def train(model, dataloaders, optimizer, scheduler, num_epochs, check_progress):
 
     print("Train start")
 
@@ -81,10 +78,12 @@ def train(model, dataloaders, optimizer, scheduler, num_epochs):
     for epoch in range(num_epochs):
 
         total_loss1 = 0.0
+        dataloader_index = 1
 
         for dataloader in dataloaders:
         
             total_loss2 = 0.0
+            batch_index = 1
 
             for batch in dataloader:
 
@@ -125,12 +124,20 @@ def train(model, dataloaders, optimizer, scheduler, num_epochs):
                 optimizer.step()
                 
                 total_loss2 += loss.item()
+                
+                if check_progress:
+                    print(f"Epoch [{epoch+1}/{num_epochs}], batch [{batch_index}/{len(dataloader)}] of datarloader [{dataloader_index}/{len(dataloaders)}]")
+                batch_index += 1
             
             total_loss2 = total_loss2/len(dataloader)
             total_loss1 += total_loss2
-            
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss1/len(dataloaders)}")
 
+            dataloader_index += 1
+        
+        print("-----------------------------------------")
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss1/len(dataloaders)}")
+        print("-----------------------------------------")
+        
         scheduler.step()
 
 def evaluation(model, dataloaders):

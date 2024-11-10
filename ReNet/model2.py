@@ -1,6 +1,10 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parents[1]))
+
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from ..EnvioX.data_processing import DataProcessing as DP
+from EnvioX.data_processing import DataProcessing as DP # type: ignore
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -78,10 +82,12 @@ class BridgeConv(ME.MinkowskiNetwork):
 class FinalConv(ME.MinkowskiNetwork):
     def __init__(self, in_channels, out_channels, D):
         super(FinalConv, self).__init__(D)
-        self.conv = ME.MinkowskiConvolution(in_channels, out_channels, kernel_size=3, stride=1, dimension=D)
+        self.conv = ME.MinkowskiConvolution(in_channels, out_channels, kernel_size=1, stride=1, dimension=D)
+        self.norm = ME.MinkowskiBatchNorm(out_channels)
 
     def forward(self, x):
         x = self.conv(x)
+        x = self.norm(x)
         return x
 
 class EncoderBox(ME.MinkowskiNetwork):

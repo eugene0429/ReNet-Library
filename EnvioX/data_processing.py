@@ -9,10 +9,10 @@ class DataProcessing():
         num_coords = sparse_tensor.C.shape[0]
         dense_tensor, _, _ = sparse_tensor.dense()
         shape = dense_tensor.shape
-        print("-------------------------------------------")
+        print("------------------------------------------------")
         print("number of points:", num_coords)
         print("shape of tensor:", shape)
-        print("-------------------------------------------")
+        print("------------------------------------------------")
         return True
 
     @staticmethod
@@ -103,6 +103,7 @@ class DataProcessing():
             concatenated_features.append(torch.cat([features_A, features_B], dim=0))
         
         concatenated_features = torch.stack(concatenated_features)
+
         out = ME.SparseTensor(
             features=concatenated_features, 
             coordinates=all_coords, 
@@ -110,8 +111,51 @@ class DataProcessing():
             tensor_stride=stride,
             coordinate_manager=tensor_A.coordinate_manager
         )
+
         return out
     
+    @staticmethod
+    def concatenate_over_time_dimension(sparse_tensor):
+        coords = sparse_tensor.C
+        feats = sparse_tensor.F
+
+        mask0 = coords[:, -1] == 0
+        mask1 = coords[:, -1] == 1
+
+        coords0 = coords[mask0]
+        coords0 = coords0[:, :-1]
+        feats0 = feats[mask0]
+
+        coords1 = coords[mask1]
+        coords1 = coords1[:, :-1]
+        feats1 = feats[mask1]
+
+        all_coords = torch.cat([coords0, coords1], dim=0).unique(dim=0)
+        
+        dict_A = {tuple(coord): i for i, coord in enumerate(coords0.tolist())}
+        dict_B = {tuple(coord): i for i, coord in enumerate(coords1.tolist())}
+        
+        num_features_A = feats0.shape[1]
+        num_features_B = feats1.shape[1]
+        concatenated_features = []
+
+        for coord in all_coords:
+            coord_tuple = tuple(coord.tolist())
+            features_A = feats0[dict_A[coord_tuple]] if coord_tuple in dict_A else torch.zeros(num_features_A)
+            features_B = feats1[dict_B[coord_tuple]] if coord_tuple in dict_B else torch.zeros(num_features_B)
+            concatenated_features.append(torch.cat([features_A, features_B], dim=0))
+        
+        concatenated_features = torch.stack(concatenated_features)
+
+        tensor = ME.SparseTensor(
+            features=concatenated_features,
+            coordinates=all_coords,
+            device=sparse_tensor.device
+            # coordinate_manager=tensor_A.coordinate_manager
+        )
+
+        return tensor
+
     @staticmethod
     def generate_empty_sparse_tensor(sparse_tensor):
         coords = sparse_tensor.C
