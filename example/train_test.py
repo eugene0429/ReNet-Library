@@ -10,7 +10,7 @@ from EnvioX.data_generation import DataGeneration # type: ignore
 from EnvioX.data_processing import DataProcessing # type: ignore
 from ReNet.model1 import ReNet as ReNet1 # type: ignore
 from ReNet.model2 import ReNet as ReNet2 # type: ignore
-from ReNet.train import train, ReNetDataset, ReNet_collate_fn # type: ignore
+from ReNet.train import ReNetDataset, ReNet_collate_fn, ReNet_train # type: ignore
 
 DG = DataGeneration()
 DP = DataProcessing()
@@ -59,13 +59,13 @@ for i in range(1, len(input_lists) + 1):
 
 print("Dataloaders are set")
 
-train(model=model,
-      dataloaders=dataloaders,
-      optimizer=optimizer,
-      scheduler=scheduler,
-      num_epochs=num_epochs,
-      check_progress=True
-      )
+ReNet_train(model=model,
+            dataloaders=dataloaders,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            num_epochs=num_epochs,
+            check_progress=True
+            )
 
 save_path = "ReNet_parameters.pth"
 torch.save(model.state_dict(), save_path)

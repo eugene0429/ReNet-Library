@@ -66,7 +66,7 @@ def ReNet_collate_fn(batch):
     
     return (coords, feats), (final_targets, list_of_targets)
 
-def train(model, dataloaders, optimizer, scheduler, num_epochs, check_progress):
+def ReNet_train(model, dataloaders, optimizer, scheduler, num_epochs, check_progress):
 
     print("Train start")
 
@@ -137,10 +137,10 @@ def train(model, dataloaders, optimizer, scheduler, num_epochs, check_progress):
         print("-----------------------------------------")
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss1/len(dataloaders)}")
         print("-----------------------------------------")
-        
+
         scheduler.step()
 
-def evaluation(model, dataloaders):
+def ReNet_evaluation(model, dataloaders):
     model.eval()
     
     euclidean_loss_fn = mean_euclidean_distance
