@@ -17,9 +17,10 @@ DP = DataProcessing()
 
 class ReNetDataset(Dataset):
 
-    def __init__(self, input_data_list, targets_list):
+    def __init__(self, input_data_list, targets_list, mode):
         self.input_data_list = input_data_list
         self.targets_list = targets_list
+        self.mode = mode
     
     def __len__(self):
         return len(self.input_data_list)
@@ -40,7 +41,7 @@ class ReNetDataset(Dataset):
 
         gt0 = self.targets_list[idx][1]
         gt1 = self.targets_list[idx][0]
-        final_target, list_of_targets = DG.genarate_target(gt0, gt1)
+        final_target, list_of_targets = DG.genarate_target(gt0, gt1, self.mode)
         
         return (coords, feats), (final_target, list_of_targets)
 
@@ -66,7 +67,7 @@ def ReNet_collate_fn(batch):
     
     return (coords, feats), (final_targets, list_of_targets)
 
-def ReNet_train(model, dataloaders, optimizer, scheduler, num_epochs, check_progress):
+def ReNet_train(model, mode, dataloaders, optimizer, scheduler, num_epochs, check_progress):
 
     print("Train start")
 
@@ -113,8 +114,11 @@ def ReNet_train(model, dataloaders, optimizer, scheduler, num_epochs, check_prog
                     x = output.C[:, 1]
                     y = output.C[:, 2]
                     z = output.C[:, 3]
-                    t = output.C[:, 4]
-                    target = target[b, x, y, z, t]
+                    if mode == 1:
+                        t = output.C[:, 4]
+                        target = target[b, x, y, z, t]
+                    elif mode == 2:
+                        target = target[b, x, y, z]
                     total_bce_loss += bce_loss_fn(output.F.squeeze(), target)
                                 
                 loss = med_loss + total_bce_loss

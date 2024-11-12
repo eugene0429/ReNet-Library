@@ -170,7 +170,7 @@ class ReNet(ME.MinkowskiNetwork):
         self.dec2 = DecoderBox(in_channels * self.ch[2] + in_channels * self.ch[1], in_channels * self.ch[1], D-1, alpha, 2)
         self.dec1 = FinalDecoderBox(in_channels * self.ch[1] + in_channels * self.ch[0], in_channels * self.ch[0], out_channels, D-1, alpha, 1)
 
-    def forward(self, x, check=True):
+    def forward(self, x, check=False):
         skip1, x = self.enc1(x, check)
         skip2, x = self.enc2(x, check)
         skip3, x = self.enc3(x, check)

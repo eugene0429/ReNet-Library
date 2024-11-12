@@ -465,7 +465,7 @@ class DataGeneration():
             elif time_index == 1:
                 coords = np.hstack((voxel_keys, np.ones((len(voxel_keys), 1), dtype=np.int32)))
             else:
-                print("time index should be 1 or 2")
+                print("time index should be 0 or 1")
                 return None
 
         centroids = np.array([points_scaled[inverse_indices == i].mean(axis=0) for i in range(len(voxel_keys))])
@@ -548,22 +548,34 @@ class DataGeneration():
 
         return True
 
-    def genarate_target(self, ground_truth_0, ground_truth_1):
+    def genarate_target(self, ground_truth_0, ground_truth_1, mode):
 
         targets = []
         output_target = self.pc_to_sparse_tensor(ground_truth_0, 64, time_index=0)
         output_target = DP.sparse_to_dense_with_size(output_target, 64)
         output_target = output_target.squeeze()
 
-        for i in range(4):
-            size = 2**(3+i)
-            coords0, _ = self.voxelize_pc(ground_truth_0, size, time_index=0)
-            coords1, _ = self.voxelize_pc(ground_truth_1, size, time_index=1)
-            coords = np.vstack([coords0, coords1])
-            coords = torch.tensor(coords)
-            target = torch.zeros((size, size, size, 2), dtype=torch.float32)
-            target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
-            targets.append(target)
+        if mode == 1:
+            for i in range(4):
+                size = 2**(3+i)
+                coords0, _ = self.voxelize_pc(ground_truth_0, size, time_index=0)
+                coords1, _ = self.voxelize_pc(ground_truth_1, size, time_index=1)
+                coords = np.vstack([coords0, coords1])
+                coords = torch.tensor(coords)
+                target = torch.zeros((size, size, size, 2), dtype=torch.float32)
+                target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
+                targets.append(target)
+        elif mode == 2:
+            for i in range(4):
+                size = 2**(3+i)
+                coords0, _ = self.voxelize_pc(ground_truth_0, size, time_index=None)
+                coords = torch.tensor(coords0)
+                target = torch.zeros((size, size, size), dtype=torch.float32)
+                target[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
+                targets.append(target)
+        else:
+            print("mode should be 1 or 2")
+            return None
         
         return output_target, targets
     

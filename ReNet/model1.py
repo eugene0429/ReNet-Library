@@ -5,7 +5,6 @@ sys.path.append(str(Path(__file__).parents[1]))
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
 from EnvioX.data_processing import DataProcessing as DP # type: ignore
-from EnvioX.data_generation import DataGeneration as DG # type: ignore
 
 import torch
 
@@ -189,7 +188,6 @@ class ReNet(ME.MinkowskiNetwork):
         self.dec1 = FinalDecoderBox1(in_channels * self.ch[1] + in_channels * self.ch[0], in_channels * self.ch[0], out_channels, D, alpha, 1)
 
     def forward(self, x, check=False):
-
         skip1, x = self.enc1(x, check)
         skip2, x = self.enc2(x, check)
         skip3, x = self.enc3(x, check)

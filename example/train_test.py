@@ -15,18 +15,34 @@ from ReNet.train import ReNetDataset, ReNet_collate_fn, ReNet_train # type: igno
 DG = DataGeneration()
 DP = DataProcessing()
 
-model = ReNet1(in_channels=3,
-               out_channels=3,
-               D=4,
-               alpha=0.5
-               )
+mode = 2
+
+if mode == 1:
+    model = ReNet1(in_channels=3,
+                out_channels=3,
+                D=4,
+                alpha=0.5
+                )
+elif mode == 2:
+    model = ReNet2(in_channels=3,
+                out_channels=3,
+                D=4,
+                alpha=0.5
+                )
+
 num_epochs = 2
 batch_size = 2
+
 lr_i = 0.01
 lr_f = 0.0001
+
 optimizer = optim.Adam(model.parameters(), lr=lr_i)
+
 gamma = (lr_f / lr_i) ** (1 / num_epochs)  
 scheduler = ExponentialLR(optimizer, gamma=gamma)
+
+save_model = False
+save_path = "ReNet_parameters.pth"
 
 sensors_config = {'tilt_angle': 30,
                  'fov_angle': 80, 
@@ -53,13 +69,21 @@ print("Data is generated")
 
 dataloaders = []
 for i in range(1, len(input_lists) + 1):
-    dataset = ReNetDataset(input_lists[f'list_{i}'], target_lists[f'list_{i}'])
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=ReNet_collate_fn)
+    dataset = ReNetDataset(input_lists[f'list_{i}'], 
+                           target_lists[f'list_{i}'],
+                           mode=mode
+                           )
+    dataloader = DataLoader(dataset, 
+                            batch_size=batch_size,
+                            shuffle=True,
+                            collate_fn=ReNet_collate_fn
+                            )
     dataloaders.append(dataloader)
 
 print("Dataloaders are set")
 
 ReNet_train(model=model,
+            mode=mode,
             dataloaders=dataloaders,
             optimizer=optimizer,
             scheduler=scheduler,
@@ -67,6 +91,6 @@ ReNet_train(model=model,
             check_progress=True
             )
 
-save_path = "ReNet_parameters.pth"
-torch.save(model.state_dict(), save_path)
-print(f"Model parameters saved to {save_path}")
+if save_model:
+    torch.save(model.state_dict(), save_path)
+    print(f"Model parameters saved to {save_path}")
