@@ -7,13 +7,10 @@ import torch.nn as nn
 import numpy as np
 import MinkowskiEngine as ME
 from torch.utils.data import Dataset
-import torch.optim as optim
 from sklearn.metrics import precision_score, recall_score, f1_score
-from EnvioX.data_generation import DataGeneration # type: ignore
-from EnvioX.data_processing import DataProcessing # type: ignore
-
-DG = DataGeneration()
-DP = DataProcessing()
+from EnvioX.TrainDataGenerator import TrainDataGenerator as DG # type: ignore
+from EnvioX.TerrainGenerator import TerrainGenerator as TG # type: ignore
+from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP # type: ignore
 
 class ReNetDataset(Dataset):
 
@@ -27,12 +24,10 @@ class ReNetDataset(Dataset):
     
     def __getitem__(self, idx):
 
-        DG = DataGeneration()
-
         input0 = self.input_data_list[idx][1]
         input1 = self.input_data_list[idx][0]
-        coords0, feats0 = DG.voxelize_pc(input0, 64, time_index=0)
-        coords1, feats1 = DG.voxelize_pc(input1, 64, time_index=1)
+        coords0, feats0 = TG.voxelize_pc(input0, 64, time_index=0)
+        coords1, feats1 = TG.voxelize_pc(input1, 64, time_index=1)
         coords = np.vstack([coords0, coords1])
         feats = np.vstack([feats0, feats1])
 
@@ -100,7 +95,7 @@ def ReNet_train(model, mode, dataloaders, optimizer, scheduler, num_epochs, chec
                 input_data = ME.SparseTensor(features=feats, coordinates=coords, device=device)
                 
                 final_output, output_list = model(input_data)
-                final_output = DP.sparse_to_dense_with_size(final_output, 64)
+                final_output = SP.sparse_to_dense_with_size(final_output, 64)
                 final_output = final_output.squeeze()
                 
                 med_loss = euclidean_loss_fn(final_output, final_target)
@@ -109,7 +104,7 @@ def ReNet_train(model, mode, dataloaders, optimizer, scheduler, num_epochs, chec
 
                 for output, target in zip(output_list,target_list):
                     output, _, _ = output.dense()
-                    output = DP.dense_to_sparse(output)
+                    output = SP.dense_to_sparse(output)
                     b = output.C[:, 0]
                     x = output.C[:, 1]
                     y = output.C[:, 2]
@@ -168,7 +163,7 @@ def ReNet_evaluation(model, dataloaders):
                 input_data = ME.SparseTensor(features=feats, coordinates=coords)
                 
                 final_output, _ = model(input_data)
-                final_output = DP.sparse_to_dense_with_size(final_output, 64)
+                final_output = SP.sparse_to_dense_with_size(final_output, 64)
                 
                 med_loss = euclidean_loss_fn(final_output, final_target)
                 

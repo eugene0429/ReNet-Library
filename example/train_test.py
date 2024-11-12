@@ -15,7 +15,7 @@ from ReNet.train import ReNetDataset, ReNet_collate_fn, ReNet_train # type: igno
 DG = DataGeneration()
 DP = DataProcessing()
 
-mode = 2
+mode = 1
 
 if mode == 1:
     model = ReNet1(in_channels=3,

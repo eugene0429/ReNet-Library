@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from EnvioX.data_processing import DataProcessing as DP # type: ignore
+from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP # type: ignore
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -28,7 +28,7 @@ class PruningLayer_(ME.MinkowskiNetwork):
         coords = x.C
         mask = (coords[:,-1] == 0).squeeze()
         x = self.pruning(x, mask)
-        x = DP.reduce_dimension(x, self.stride)
+        x = SP.reduce_dimension(x, self.stride)
         return x
 
 class Conv(ME.MinkowskiNetwork):
@@ -103,7 +103,7 @@ class EncoderBox(ME.MinkowskiNetwork):
         skip = self.pruning(skip)
         x = self.down_conv(x)
         if check:
-            DP.print_sparse_tensor_num_coords_and_shape(x)
+            SP.print_sparse_tensor_num_coords_and_shape(x)
         return skip, x
 
 class Bridge(ME.MinkowskiNetwork):
@@ -114,10 +114,10 @@ class Bridge(ME.MinkowskiNetwork):
 
     def forward(self, x, check):
         x = self.conv(x)
-        x = DP.reduce_dimension(x, 16)
+        x = SP.reduce_dimension(x, 16)
         x = self.up_conv(x)
         if check:
-            DP.print_sparse_tensor_num_coords_and_shape(x)
+            SP.print_sparse_tensor_num_coords_and_shape(x)
         return x
 
 class DecoderBox(ME.MinkowskiNetwork):
@@ -129,12 +129,12 @@ class DecoderBox(ME.MinkowskiNetwork):
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
-        x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv(x)
         lh, x = self.pruning(x)
         x = self.up_conv(x)
         if check:
-            DP.print_sparse_tensor_num_coords_and_shape(x)
+            SP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
 class FinalDecoderBox(ME.MinkowskiNetwork):
@@ -146,12 +146,12 @@ class FinalDecoderBox(ME.MinkowskiNetwork):
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
-        x = DP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
         lh, x = self.pruning(x)
         x = self.conv2(x)
         if check:
-            DP.print_sparse_tensor_num_coords_and_shape(x)
+            SP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
 class ReNet(ME.MinkowskiNetwork):

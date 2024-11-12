@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import MinkowskiEngine as ME
+from .TerrainGenerator import TerrainGenerator as TG
 
-class DataProcessing():
+class SparseTensorProcessor():
     
     @staticmethod
     def print_sparse_tensor_num_coords_and_shape(sparse_tensor):
@@ -181,6 +182,32 @@ class DataProcessing():
             tensor_stride=stride
         )
         return out
+    
+    @staticmethod
+    def pc_to_voxelized_sparse_tensor(point_cloud,
+                                      voxel_resolution,
+                                      time_index
+                                      ):
+        
+        if len(point_cloud)==1:
+            coords = []
+            feats = []
+            for i in range(len(point_cloud)):
+                coord, feat = TG.voxelize_pc(point_cloud[i], voxel_resolution, time_index)
+                coords.append(coord)
+                feats.append(feat)
+            coords, feats = ME.utils.sparse_collate(coords, feats)
+            sparse_tensor = ME.SparseTensor(features=feats, coordinates=coords)
+
+        else:
+            coords, feats = TG.voxelize_pc(point_cloud, voxel_resolution, time_index)
+            feats = torch.from_numpy(feats)
+            coords = torch.from_numpy(coords)
+            coords, feats = ME.utils.sparse_collate([coords], [feats])
+            sparse_tensor = ME.SparseTensor(features=feats, coordinates=coords)
+
+        return sparse_tensor
+
     
     def are_sparse_tensors_equal(self, tensor1, tensor2):
         coords1, feats1 = tensor1.coordinates, tensor1.features

@@ -2,11 +2,12 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
-from EnvioX.data_processing import DataProcessing # type: ignore
-from EnvioX.data_generation import DataGeneration # type: ignore
+from EnvioX.TerrainGenerator import TerrainGenerator # type: ignore
+from EnvioX.SparseTensorProcessor import SparseTensorProcessor # type: ignore
+from EnvioX.Visualizer import Visualizer # type: ignore
 
-DP = DataProcessing()
-DG = DataGeneration()
+TG = TerrainGenerator()
+SP = SparseTensorProcessor()
 
 grid_size = 20
 point_density_1 = 15
@@ -24,7 +25,7 @@ environment_config = {'grid_size': grid_size,  # length & width of environment (
                       }
 
 # generating environment config with random number of obstacles
-environment_config_random = DG.generate_env_configs(grid_size=grid_size, 
+environment_config_random = TG.generate_env_configs(grid_size=grid_size, 
                                                     point_density=point_density_1,
                                                     num_env_configs=1 # number of randomised environment configs
                                                                       # if it is bigger than 1,
@@ -40,7 +41,7 @@ sensors_config = {'tilt_angle': 30, # downward tilt angle
                                        'left': [0.0, 0.2, 0.0]}
                  }
 
-robot_config = DG.generate_robot_configs(grid_size=grid_size, 
+robot_config = TG.generate_robot_configs(grid_size=grid_size, 
                                          detection_range=detection_range, # length & width & height of detection area (m)
                                          robot_size=robot_size, # size of robot cosidering it as box [length, width, height] (m)
                                          robot_speed=robot_speed, # speed of robot (m/s)
@@ -53,29 +54,29 @@ robot_config = DG.generate_robot_configs(grid_size=grid_size,
                                          )
 
 # generating point cloud data of an environment
-environment = DG.generate_environment(environment_config)
+environment = TG.generate_environment(environment_config)
 
 # generating point cloud data of a detection area
-terrain_data = DG.filter_points_in_detection_area(environment=environment,
+terrain_data = TG.filter_points_in_detection_area(environment=environment,
                                                   robot_config=robot_config,
                                                   visualize=True # if True, add 1 dummy point to the data
                                                                  # for well visualizing
                                                   )
 
 # generating sensor detected point cloud data of a detection area
-sensor_detection = DG.senser_detection(point_clouds=terrain_data,
+sensor_detection = TG.senser_detection(point_clouds=terrain_data,
                                        robot_config=robot_config,
                                        visualize=True
                                        )
 
 # generating voxelized data
-coords, feats = DG.voxelize_pc(point_cloud=sensor_detection[0], # return value of filter_points_in_detection_area() 
+coords, feats = TG.voxelize_pc(point_cloud=sensor_detection[0], # return value of filter_points_in_detection_area() 
                                                                 # & sensor_detection() is array
                                voxel_resolution=voxel_resolution, # number of voxel in each side
                                time_index=None # if 0 or 1,
                                                # concatenates time index to coordinates
                                )
 
-DG.visualize_pc(terrain_data)
-DG.visualize_pc(sensor_detection)
-DG.visualize_voxel(coords, voxel_resolution)
+Visualizer.visualize_pc(terrain_data)
+Visualizer.visualize_pc(sensor_detection)
+Visualizer.visualize_voxel(coords, voxel_resolution)
