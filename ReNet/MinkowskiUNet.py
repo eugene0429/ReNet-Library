@@ -76,13 +76,3 @@ class UNet(ME.MinkowskiNetwork):
         out = ME.cat(out, out_s1)
 
         return self.conv1_tr(out)
-
-
-if __name__ == '__main__':
-    net = UNet(3, 5, D=2)
-
-    feat = torch.rand(20, 3).float()
-    coords = torch.randint(0, 10, (20, 3)).int()
-    input = ME.SparseTensor(feat, coords)
-
-    output = net(input)
