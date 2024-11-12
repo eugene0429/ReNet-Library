@@ -6,29 +6,26 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
-from EnvioX.data_generation import DataGeneration # type: ignore
-from EnvioX.data_processing import DataProcessing # type: ignore
+
+from EnvioX.TrainDataGenerator import TrainDataGenerator as DG # type: ignore
 from ReNet.model1 import ReNet as ReNet1 # type: ignore
 from ReNet.model2 import ReNet as ReNet2 # type: ignore
 from ReNet.train import ReNetDataset, ReNet_collate_fn, ReNet_train # type: ignore
-
-DG = DataGeneration()
-DP = DataProcessing()
 
 mode = 1
 
 if mode == 1:
     model = ReNet1(in_channels=3,
-                out_channels=3,
-                D=4,
-                alpha=0.5
-                )
+                   out_channels=3,
+                   D=4,
+                   alpha=0.5
+                   )
 elif mode == 2:
     model = ReNet2(in_channels=3,
-                out_channels=3,
-                D=4,
-                alpha=0.5
-                )
+                   out_channels=3,
+                   D=4,
+                   alpha=0.5
+                   )
 
 num_epochs = 2
 batch_size = 2
