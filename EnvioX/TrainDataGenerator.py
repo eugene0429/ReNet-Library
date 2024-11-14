@@ -3,6 +3,14 @@ import torch
 import MinkowskiEngine as ME
 from .SparseTensorProcessor import SparseTensorProcessor as SP
 from .TerrainGenerator import TerrainGenerator as TG
+import json
+import os
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 class TrainDataGenerator():
     
@@ -46,13 +54,13 @@ class TrainDataGenerator():
                          detection_range,
                          robot_size,
                          robot_speed,
-                         sensors_config,
+                         sensor_config,
                          point_density,
                          num_env_configs,
                          num_data_per_env,
-                         time_step,
                          num_time_step,
-                         visualize=False
+                         time_step,
+                         save_path,
                          ):
 
         env_configs = TG.generate_env_configs(grid_size,
@@ -60,11 +68,12 @@ class TrainDataGenerator():
                                               num_env_configs
                                               )
         
-        input_data_lists = {}
-        target_lists = {}
-        for i in range(1, num_time_step + 1):
-            input_data_lists[f'list_{i}'] = []
-            target_lists[f'list_{i}'] = []
+        targets_path = os.path.join(save_path, 'targets')
+        inputs_path = os.path.join(save_path, 'inputs')
+        os.makedirs(targets_path, exist_ok=True)
+        os.makedirs(inputs_path, exist_ok=True)
+
+        num_total_data = 0
 
         for env_config in env_configs:
             
@@ -73,32 +82,65 @@ class TrainDataGenerator():
 
             while(num_data<num_data_per_env):
                 
-                robot_config = TG.generate_robot_configs(grid_size,
-                                                         detection_range,
-                                                         robot_size,
-                                                         robot_speed,
-                                                         sensors_config,
-                                                         time_step,
-                                                         num_time_step
-                                                         )
-                
-                target = TG.filter_points_in_detection_area(env,
-                                                            robot_config,
-                                                            visualize
-                                                            )
+                robot_positions, _ = TG.generate_robot_configs(grid_size,
+                                                               detection_range,
+                                                               robot_size,
+                                                               robot_speed,
+                                                               num_time_step,
+                                                               time_step
+                                                               )
+                for i in range(1, len(robot_positions)):
+                    robot_position0 = robot_positions[i]
+                    robot_position1 = robot_positions[i-1]
 
-                if target==None:
-                    continue
-                
-                input = TG.senser_detection(target,
-                                            robot_config,
-                                            visualize
-                                            )
+                    target0 = TG.filter_points_in_detection_area(env,
+                                                                 detection_range,
+                                                                 robot_size,
+                                                                 robot_position0
+                                                                 )
+                                        
+                    if target0 is None:
+                        continue
+                    
+                    target1 = TG.filter_points_in_detection_area(env,
+                                                                 detection_range,
+                                                                 robot_size,
+                                                                 robot_position1
+                                                                 )
+                    
+                    if target1 is None:
+                        continue
 
-                for i in range(1, num_time_step + 1):
-                    input_data_lists[f'list_{i}'].append(input[i-1:i+1])
-                    target_lists[f'list_{i}'].append(target[i-1:i+1])
+                    input0 = TG.senser_detection(target0,
+                                                 detection_range,
+                                                 robot_size,
+                                                 sensor_config
+                                                 )
+                    
+                    input1 = TG.senser_detection(target1,
+                                                 detection_range,
+                                                 robot_size,
+                                                 sensor_config
+                                                 )
+                    
+                    target0 = target0.tolist()
+                    target1 = target1.tolist()
+                    target = [target0, target1]
 
-                num_data += 1
+                    input0 = input0.tolist()
+                    input1 = input1.tolist()
+                    input = [input0, input1]
 
-        return input_data_lists, target_lists
+                    num_data += 1
+                    num_total_data += 1
+                    
+                    target_path = os.path.join(targets_path, f'target_{num_total_data}.json')
+                    input_path = os.path.join(inputs_path, f'input_{num_total_data}.json')
+
+                    with open(target_path, 'w') as f:
+                        json.dump(target, f)
+
+                    with open(input_path, 'w') as f:
+                        json.dump(input, f)
+
+        return True

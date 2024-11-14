@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
+import os
 import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -11,6 +12,7 @@ from EnvioX.TrainDataGenerator import TrainDataGenerator as DG # type: ignore
 from ReNet.model1 import ReNet as ReNet1 # type: ignore
 from ReNet.model2 import ReNet as ReNet2 # type: ignore
 from ReNet.train import ReNetDataset, ReNet_collate_fn, ReNet_train # type: ignore
+from ReNet.train import visual_model_evaluation # type: ignore
 
 mode = 1
 
@@ -38,10 +40,19 @@ optimizer = optim.Adam(model.parameters(), lr=lr_i)
 gamma = (lr_f / lr_i) ** (1 / num_epochs)  
 scheduler = ExponentialLR(optimizer, gamma=gamma)
 
-save_model = False
-save_path = "ReNet_parameters.pth"
+save_model = True
+model_path = "/Users/baeg-yujin/Desktop/Study/Univ/research/DRCD/code/test/ReNet_parameters.pth"
 
-sensors_config = {'tilt_angle': 30,
+generate_new_data = True
+data_path = "/Users/baeg-yujin/Desktop/Study/Univ/research/DRCD/data"
+os.makedirs(data_path, exist_ok=True)
+
+train_data_path = os.path.join(data_path, 'train')
+test_data_path = os.path.join(data_path, 'test')
+os.makedirs(train_data_path, exist_ok=True)
+os.makedirs(test_data_path, exist_ok=True)
+
+sensor_config = {'tilt_angle': 30,
                  'fov_angle': 80, 
                  'detection_distance': 2,
                  'relative_position': {'front': [0.5, 0.0, 0.0], 
@@ -50,38 +61,48 @@ sensors_config = {'tilt_angle': 30,
                                        'left': [0.0, 0.2, 0.0]}
                  }
 
-input_lists, target_lists = DG.generate_dataset(grid_size=20,
-                                                detection_range=3.2,
-                                                robot_size=[0.4, 1.0, 0.8],
-                                                robot_speed=1.0,
-                                                sensors_config=sensors_config,
-                                                point_density=15,
-                                                num_env_configs=2,
-                                                num_data_per_env=2,
-                                                time_step=0.1,
-                                                num_time_step=2,
-                                                visualize=False
-                                                )
-print("Data is generated")
+if generate_new_data:
 
-dataloaders = []
-for i in range(1, len(input_lists) + 1):
-    dataset = ReNetDataset(input_lists[f'list_{i}'], 
-                           target_lists[f'list_{i}'],
-                           mode=mode
-                           )
-    dataloader = DataLoader(dataset, 
-                            batch_size=batch_size,
-                            shuffle=True,
-                            collate_fn=ReNet_collate_fn
-                            )
-    dataloaders.append(dataloader)
+    DG.generate_dataset(grid_size=20,
+                        detection_range=3.2,
+                        robot_size=[0.4, 1.0, 0.8],
+                        robot_speed=1.0,
+                        sensor_config=sensor_config,
+                        point_density=15,
+                        num_env_configs=2,
+                        num_data_per_env=10,
+                        num_time_step=2,
+                        time_step=0.2,
+                        save_path=train_data_path
+                        )
 
-print("Dataloaders are set")
+    DG.generate_dataset(grid_size=20,
+                        detection_range=3.2,
+                        robot_size=[0.4, 1.0, 0.8],
+                        robot_speed=1.0,
+                        sensor_config=sensor_config,
+                        point_density=15,
+                        num_env_configs=1,
+                        num_data_per_env=2,
+                        num_time_step=2,
+                        time_step=0.2,
+                        save_path=test_data_path
+                        )
+    print("-----------------------------------------")
+    print("           Data is generated             ")
+    print("-----------------------------------------")
+
+dataset = ReNetDataset(train_data_path, mode=mode)
+
+dataloader = DataLoader(dataset=dataset, 
+                        batch_size=batch_size,
+                        shuffle=True,
+                        collate_fn=ReNet_collate_fn
+                        )
 
 ReNet_train(model=model,
             mode=mode,
-            dataloaders=dataloaders,
+            dataloader=dataloader,
             optimizer=optimizer,
             scheduler=scheduler,
             num_epochs=num_epochs,
@@ -89,5 +110,11 @@ ReNet_train(model=model,
             )
 
 if save_model:
-    torch.save(model.state_dict(), save_path)
-    print(f"Model parameters saved to {save_path}")
+    torch.save(model.state_dict(), model_path)
+    print(f"Model parameters saved to {model_path}")
+
+visual_model_evaluation(model=model,
+                        model_path=model_path,
+                        test_data_path=test_data_path,
+                        test_index=2
+                        )

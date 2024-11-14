@@ -3,8 +3,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
 from EnvioX.SparseTensorProcessor import SparseTensorProcessor # type: ignore
-from ReNet.model1 import ReNet1 # type: ignore
-from ReNet.model2 import ReNet2 # type: ignore
+from ReNet.model1 import ReNet as ReNet1 # type: ignore
+from ReNet.model2 import ReNet as ReNet2 # type: ignore
 
 SP = SparseTensorProcessor()
 
@@ -28,5 +28,5 @@ net = ReNet1(in_channel,
              alpha
              )
 
-_, a1 = net(s, check=True)
+_, o = net(s, check=True)
 

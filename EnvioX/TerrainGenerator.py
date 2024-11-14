@@ -2,51 +2,50 @@ import numpy as np
 import math
 import random
 from scipy.spatial.transform import Rotation as R
-
+    
 def _generate_box_point_cloud(center,
                               width,
                               length,
                               height,
-                              point_density):
+                              point_density,
+                              mode
+                              ):
 
-    x = np.linspace(center[0] - width / 2, center[0] + width / 2, int(point_density * width))
-    y = np.linspace(center[1] - length / 2, center[1] + length / 2, int(point_density * length))
-    z = np.linspace(0, height, int(point_density * height))
+    if mode == 1:
+        num_x = int(point_density * width)
+        num_z = math.ceil(int(point_density * width) * height / width)
+    elif mode == 2:
+        num_x = int(point_density * width)
+        num_z = int(point_density * height)
+    elif mode == 3:
+        num_x = math.ceil(int(point_density * height) * width / height)
+        num_z = int(point_density * height)
+
+    x = np.linspace(- width / 2, width / 2, num_x)
+    y = np.linspace(- length / 2, length / 2, int(point_density * length))
+    z = np.linspace(0, height, num_z)
 
     X, Y, Z = np.meshgrid(x, y, z)
 
     points = np.vstack([
         np.column_stack((X.ravel(), Y.ravel(), np.full_like(Z.ravel(), 0))),
         np.column_stack((X.ravel(), Y.ravel(), np.full_like(Z.ravel(), height))),
-        np.column_stack((X.ravel(), np.full_like(Y.ravel(), center[1] - length / 2), Z.ravel())),
-        np.column_stack((X.ravel(), np.full_like(Y.ravel(), center[1] + length / 2), Z.ravel())),
-        np.column_stack((np.full_like(X.ravel(), center[0] - width / 2), Y.ravel(), Z.ravel())),
-        np.column_stack((np.full_like(X.ravel(), center[0] + width / 2), Y.ravel(), Z.ravel()))
+        np.column_stack((X.ravel(), np.full_like(Y.ravel(), - length / 2), Z.ravel())),
+        np.column_stack((X.ravel(), np.full_like(Y.ravel(), length / 2), Z.ravel())),
+        np.column_stack((np.full_like(X.ravel(), - width / 2), Y.ravel(), Z.ravel())),
+        np.column_stack((np.full_like(X.ravel(), width / 2), Y.ravel(), Z.ravel()))
     ])
-
-    return points
     
-def _generate_box_point_cloud_(center,
-                               width,
-                               length,
-                               height,
-                               point_density
-                               ):
+    points_xy = points[:, :2]
 
-    x = np.linspace(center[0] - width / 2, center[0] + width / 2, int(point_density * width))
-    y = np.linspace(center[1] - length / 2, center[1] + length / 2, int(point_density * length))
-    z = np.linspace(0, height, math.ceil(int(point_density * width) * height / width))
+    rotated_point = _rotate_vecter(vector=points_xy,
+                                   yaw=random.uniform(-math.pi, math.pi),
+                                   dimension=2
+                                   )
+    
+    rotated_point = rotated_point + center
 
-    X, Y, Z = np.meshgrid(x, y, z)
-
-    points = np.vstack([
-        np.column_stack((X.ravel(), Y.ravel(), np.full_like(Z.ravel(), 0))),
-        np.column_stack((X.ravel(), Y.ravel(), np.full_like(Z.ravel(), height))),
-        np.column_stack((X.ravel(), np.full_like(Y.ravel(), center[1] - length / 2), Z.ravel())),
-        np.column_stack((X.ravel(), np.full_like(Y.ravel(), center[1] + length / 2), Z.ravel())),
-        np.column_stack((np.full_like(X.ravel(), center[0] - width / 2), Y.ravel(), Z.ravel())),
-        np.column_stack((np.full_like(X.ravel(), center[0] + width / 2), Y.ravel(), Z.ravel()))
-    ])
+    points = np.hstack((rotated_point, points[:, 2:3]))
 
     return points
 
@@ -64,7 +63,13 @@ def _generate_multiple_boxes(num_boxes,
 
         center = np.random.uniform(-(grid_size / 2- 1), grid_size / 2 - 1, 2)
 
-        points = _generate_box_point_cloud_(center, width, length, height, point_density)
+        points = _generate_box_point_cloud(center,
+                                           width,
+                                           length,
+                                           height,
+                                           point_density,
+                                           mode=1
+                                           )
 
         all_points.append(points)
 
@@ -84,7 +89,13 @@ def _generate_multiple_pillars(num_pillars,
 
         center = np.random.uniform(-(grid_size / 2 - 1), grid_size / 2 - 1, 2)
 
-        points = _generate_box_point_cloud(center, width, length, height, point_density)
+        points = _generate_box_point_cloud(center,
+                                           width,
+                                           length,
+                                           height,
+                                           point_density,
+                                           mode=2
+                                           )
 
         all_points.append(points)
 
@@ -99,21 +110,19 @@ def _generate_multiple_walls(num_walls,
 
     for _ in range(num_walls):
 
-        orientation = random.choice(['horizontal', 'vertical'])
-
-        if orientation == 'horizontal':
-            width = np.random.uniform(6, 10)
-            length = np.random.uniform(0.2, 0.5)
-            height = 4
-
-        else:
-            width = np.random.uniform(0.2, 0.5)
-            length = np.random.uniform(6, 10)
-            height = 4
+        width = np.random.uniform(0.2, 0.5)
+        length = np.random.uniform(6, 10)
+        height = 4
 
         center = np.random.uniform(-(grid_size / 2 - 5), grid_size / 2 - 5, 2)
 
-        points = _generate_box_point_cloud(center, width, length, height, point_density)
+        points = _generate_box_point_cloud(center,
+                                           width,
+                                           length,
+                                           height,
+                                           point_density,
+                                           mode=3
+                                           )
 
         all_points.append(points)
 
@@ -137,7 +146,10 @@ def _generate_ground(grid_size,
 
     return points
 
-def _rotate_vecter(vector, yaw, dimension):
+def _rotate_vecter(vector,
+                   yaw, 
+                   dimension
+                   ):
 
     cos_yaw = np.cos(yaw)
     sin_yaw = np.sin(yaw)
@@ -158,11 +170,15 @@ def _rotate_vecter(vector, yaw, dimension):
 
     return rotated_vecter
 
-def _check_vaildation(point_cloud, robot_position, robot_size):
+def _check_vaildation(point_cloud,
+                      robot_position,
+                      robot_size,
+                      detection_range
+                      ):
 
     x_min, x_max = robot_position[0] - robot_size[0] / 1.5, robot_position[0] + robot_size[0] / 1.5
     y_min, y_max = robot_position[1] - robot_size[1] / 1.5, robot_position[1] + robot_size[1] / 1.5
-    z_min, z_max = 0.5, 3.2
+    z_min, z_max = detection_range / 8, detection_range
 
     if point_cloud.ndim==2:
         in_range = np.any(
@@ -229,7 +245,6 @@ def _generate_sensors(tilt_angle,
     return sensors
 
 def _noisify_point_cloud(point_cloud,
-                         robot_position,
                          robot_size, 
                          detection_range
                          ):
@@ -238,7 +253,7 @@ def _noisify_point_cloud(point_cloud,
     TILT_ANGLE_RANGE = 1
     HEIGHT_NOISE_RANGE = 0.05
     PRUNING_PERCENTAGE = random.uniform(0.05, 0.1)
-    NUM_CLUSTERS = random.randint(3, 6)
+    NUM_CLUSTERS = random.randint(4, 7)
     POINTS_PER_CLUSER = random.randint(10, 20)
 
     position_noise = np.random.uniform(-POS_NOISE_RANGE, POS_NOISE_RANGE, point_cloud.shape)
@@ -257,40 +272,56 @@ def _noisify_point_cloud(point_cloud,
     keep_indices = np.random.choice(point_cloud.shape[0], size=int((1-PRUNING_PERCENTAGE) * point_cloud.shape[0]), replace=False)
     point_cloud = point_cloud[keep_indices, :]
 
-    cluster_center_range = [[robot_position[0] - detection_range / 2.5, robot_position[0] + detection_range / 2.5],
-                                [robot_position[1] - detection_range / 2.5, robot_position[1] + detection_range / 2.5],
-                                [0, detection_range / 2]]
+    cluster_center_range = [[- detection_range / 2.5, detection_range / 2.5],
+                            [- detection_range / 2.5, detection_range / 2.5],
+                            [0, detection_range / 2]]
 
-    for _ in range(NUM_CLUSTERS):
+    num_clusters = 0
+    while(num_clusters < NUM_CLUSTERS):
         cluster_center = np.array([random.uniform(cluster_center_range[0][0], cluster_center_range[0][1]),
-                                       random.uniform(cluster_center_range[1][0], cluster_center_range[1][1]),
-                                       random.uniform(cluster_center_range[2][0], cluster_center_range[2][1])])
+                                   random.uniform(cluster_center_range[1][0], cluster_center_range[1][1]),
+                                   random.uniform(cluster_center_range[2][0], cluster_center_range[2][1])])
         if _check_vaildation(cluster_center,
-                             robot_position,
-                             robot_size
+                             np.array([0, 0, 0]),
+                             robot_size,
+                             detection_range
                              ):
             continue
 
         cluster_points = cluster_center + np.random.normal(scale=0.08, size=(POINTS_PER_CLUSER, 3))
         point_cloud = np.vstack((point_cloud, cluster_points))
+        num_clusters += 1
         
     return point_cloud
 
 class TerrainGenerator():
 
     @staticmethod
-    def generate_environment(env_config):
+    def generate_environment(env_config,
+                             visualize=False
+                             ):
 
         grid_size = env_config['grid_size']
         num_obstacles = env_config['num_obstacles']
         point_density = env_config['point_density']
 
         ground = _generate_ground(grid_size, point_density)
-        boxes = _generate_multiple_boxes(num_obstacles['num_boxes'], grid_size, point_density)
-        pillars = _generate_multiple_pillars(num_obstacles['num_pillars'], grid_size, point_density)
-        walls = _generate_multiple_walls(num_obstacles['num_walls'], grid_size, point_density)
+        environment = ground
 
-        environment = np.vstack([ground, boxes, pillars, walls])
+        if num_obstacles['num_boxes'] != 0:
+            boxes = _generate_multiple_boxes(num_obstacles['num_boxes'], grid_size, point_density)
+            environment = np.vstack([environment, boxes])
+
+        if num_obstacles['num_pillars'] != 0:
+            pillars = _generate_multiple_pillars(num_obstacles['num_pillars'], grid_size, point_density)
+            environment = np.vstack([environment, pillars])
+
+        if num_obstacles['num_walls'] != 0:
+            walls = _generate_multiple_walls(num_obstacles['num_walls'], grid_size, point_density)
+            environment = np.vstack([environment, walls])
+
+        if visualize:
+            environment = np.vstack([environment, np.array([0, 0, grid_size])])
 
         return environment
     
@@ -314,194 +345,127 @@ class TerrainGenerator():
                           }
             env_configs.append(env_config)
         
-        if num_env_configs==1:
-            return env_configs[0]
-        else:
-            return env_configs
+        return env_configs
     
     @staticmethod
     def generate_robot_configs(grid_size, 
                                detection_range, 
                                robot_size, 
                                robot_speed, 
-                               sensors_config,
-                               time_step,
-                               num_time_step
+                               num_time_step,
+                               time_step
                                ):
         
         range_value = grid_size / 2 - detection_range
 
-        if time_step != None:
-            robot_positions = []
-            robot_yaws = []
-            for i in range(num_time_step + 1):
-                if i==0:
-                    robot_position = np.array([random.uniform(-range_value, range_value), 
-                                               random.uniform(-range_value, range_value), 
-                                               robot_size[2]]
-                                               )
-                    robot_yaw = random.uniform(-math.pi, math.pi)
+        robot_positions = []
+        robot_yaws = []
+        for i in range(num_time_step + 1):
+            if i==0:
+                robot_position = np.array([random.uniform(-range_value, range_value), 
+                                           random.uniform(-range_value, range_value), 
+                                           robot_size[2]]
+                                           )
+                robot_yaw = random.uniform(-math.pi, math.pi)
 
-                    robot_positions.append(robot_position)
-                    robot_yaws.append(robot_yaw)
+                robot_positions.append(robot_position)
+                robot_yaws.append(robot_yaw)
                     
-                else:
-                    direction_vector = np.array([np.cos(robot_yaw), np.sin(robot_yaw), 0])
-                    robot_position = robot_position + robot_speed * direction_vector * time_step
-                    robot_yaw = robot_yaw + random.uniform(-math.pi / 10, math.pi / 10)
+            else:
+                direction_vector = np.array([np.cos(robot_yaw), np.sin(robot_yaw), 0])
+                robot_position = robot_position + robot_speed * direction_vector * time_step
+                robot_yaw = robot_yaw + random.uniform(-math.pi / 10, math.pi / 10)
                     
-                    robot_positions.append(robot_position)
-                    robot_yaws.append(robot_yaw)
-            
-            robot_config = {'position': robot_positions,
-                            'yaw': robot_yaws,
-                            'detection_range': detection_range,
-                            'size': robot_size,
-                            'sensors': sensors_config
-                            }
+                robot_positions.append(robot_position)
+                robot_yaws.append(robot_yaw)
 
-            return robot_config
-            
-        else:
-            robot_position = np.array([random.uniform(-range_value, range_value), 
-                                       random.uniform(-range_value, range_value), 
-                                       robot_size[2]]
-                                       )
-            robot_yaw = random.uniform(- math.pi, math.pi)
-            
-            robot_config = {'position': [robot_position],
-                            'yaw': [robot_yaw],
-                            'detection_range': detection_range,
-                            'size': robot_size,
-                            'sensors': sensors_config
-                            }
-
-            return robot_config
+        return robot_positions, robot_yaws
 
     @staticmethod
-    def filter_points_in_detection_area(environment, 
-                                        robot_config, 
-                                        use_yaw=True, 
+    def filter_points_in_detection_area(environment,
+                                        detection_range,
+                                        robot_size,
+                                        robot_position,
                                         visualize=False
                                         ):
-        
-        detection_range = robot_config['detection_range']
-        robot_size = robot_config['size']
-
-        points = []
-
-        for i in range(len(robot_config['position'])):
-
-            robot_position = robot_config['position'][i]
-            robot_yaw = robot_config['yaw'][i]
-
-            if not use_yaw:
-                robot_yaw = 0
             
-            if _check_vaildation(environment,
-                                 robot_position,
-                                 robot_size
-                                 ):
-                return None
+        if _check_vaildation(environment,
+                             robot_position,
+                             robot_size,
+                             detection_range
+                             ):
+            return None
 
-            translated_point_cloud = environment[:, :2] - robot_position[:2]
+        translated_points = environment[:, :2] - robot_position[:2]
+        translated_points = np.hstack([translated_points, environment[:, 2:3]])
             
-            rotated_point_cloud = _rotate_vecter(vector=translated_point_cloud,
-                                                 yaw=robot_yaw,
-                                                 dimension=2
-                                                 )
+        x_min = -detection_range / 2
+        x_max = detection_range / 2
+        y_min = -detection_range / 2
+        y_max = detection_range / 2
+        z_min = 0
+        z_max = 3.2
 
-            rotated_point_cloud = np.hstack((rotated_point_cloud, environment[:, 2:3]))
+        filtered_points = translated_points[
+            (translated_points[:, 0] >= x_min) & (translated_points[:, 0] <= x_max) &
+            (translated_points[:, 1] >= y_min) & (translated_points[:, 1] <= y_max) &
+            (translated_points[:, 2] >= z_min) & (translated_points[:, 2] <= z_max)
+        ]
             
-            x_min = -detection_range / 2
-            x_max = detection_range / 2
-            y_min = -detection_range / 2
-            y_max = detection_range / 2
-            z_min = 0
-            z_max = 3.2
-
-            filtered_points = rotated_point_cloud[
-                (rotated_point_cloud[:, 0] >= x_min) & (rotated_point_cloud[:, 0] <= x_max) &
-                (rotated_point_cloud[:, 1] >= y_min) & (rotated_point_cloud[:, 1] <= y_max) &
-                (rotated_point_cloud[:, 2] >= z_min) & (rotated_point_cloud[:, 2] <= z_max)
-            ]
-
-            filtered_points[:, :2] = _rotate_vecter(vector=filtered_points[:, :2],
-                                                    yaw=robot_yaw,
-                                                    dimension=2
-                                                    ) + robot_position[:2]
-            
-            if visualize:
-                filtered_points = np.vstack([filtered_points,
-                                             np.array([robot_position[0],
-                                                       robot_position[1],
-                                                       detection_range])])
-                                                       
-            points.append(filtered_points)
-
-        return points
+        if visualize:
+            filtered_points = np.vstack([filtered_points,
+                                        np.array([0,
+                                                  0,
+                                                  detection_range])])
+                            
+        return filtered_points
 
     @staticmethod
-    def senser_detection(point_clouds,
-                         robot_config,
+    def senser_detection(point_cloud,
+                         detection_range,
+                         robot_size,
+                         sensor_config,
                          visualize=False
                          ):
         
-        detection_range = robot_config['detection_range']
-        robot_size = robot_config['size']
-        sensor_config = robot_config['sensors']
         sensors = _generate_sensors(sensor_config['tilt_angle'], 
                                     sensor_config['fov_angle'], 
                                     sensor_config['detection_distance'], 
                                     sensor_config['relative_position']
                                     )
 
-        points = []
+        robot_position = np.array([random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05), robot_size[2]])
 
-        for i in range(len(point_clouds)):
-
-            robot_position = robot_config['position'][i]
-            robot_position = robot_position + np.array([random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05), 0])
-            robot_yaw = robot_config['yaw'][i]
-
-            detected_points = []
+        detected_points = []
             
-            for point in point_clouds[i]:
-                visible = False
-                for sensor in sensors:
-                    rotated_position = _rotate_vecter(vector=np.array(sensor['position']),
-                                                      yaw=robot_yaw,
-                                                      dimension=3
-                                                      )
-                    sensor_position = robot_position + rotated_position
-                    rotated_direction = _rotate_vecter(vector=np.array(sensor['direction']),
-                                                       yaw=robot_yaw,
-                                                       dimension=3
-                                                       )
-                    if _is_in_fov(point, sensor_position,
-                                  rotated_direction, sensor['fov'],
-                                  sensor['max_distance']
-                                  ):
-                        visible = True
-                        break
-                if visible:
-                    detected_points.append(point)
+        for point in point_cloud:
+            visible = False
+            for sensor in sensors:
+                sensor_position = np.array(sensor['position']) + robot_position
+                if _is_in_fov(point, 
+                              sensor_position,
+                              np.array(sensor['direction']),
+                              sensor['fov'],
+                              sensor['max_distance']
+                              ):
+                    visible = True
+                    break
 
-            detected_points = np.array(detected_points)
+            if visible:
+                detected_points.append(point)
+
+        detected_points = np.array(detected_points)
             
-            detected_points = _noisify_point_cloud(detected_points,
-                                                   robot_position,
-                                                   robot_size,
-                                                   detection_range
-                                                   )
-
-            if visualize:
-                detected_points = np.vstack([detected_points,
-                                             np.array([robot_position[0], robot_position[1], detection_range])])
-
-            points.append(detected_points)
+        detected_points = _noisify_point_cloud(detected_points,
+                                               robot_size,
+                                               detection_range
+                                               )
         
-        return points
+        if visualize:
+            detected_points = np.vstack([detected_points,
+                                         np.array([0, 0, detection_range])])
+        
+        return detected_points
     
     @staticmethod
     def voxelize_pc(point_cloud,

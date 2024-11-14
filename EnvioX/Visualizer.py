@@ -1,23 +1,22 @@
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
+import json
 
 class Visualizer():
     
     @staticmethod
-    def visualize_pc(point_clouds):
+    def visualize_pc(point_cloud):
         
-        for i in range(len(point_clouds)):
-            point_cloud = point_clouds[i]
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
-            ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
+        ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
 
-            ax.grid(False)
-            ax.axis('off')
+        ax.grid(False)
+        ax.axis('off')
 
-            plt.show()
+        plt.show()
 
         return True
     
@@ -30,7 +29,10 @@ class Visualizer():
 
         _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
         coord = data.C
-        mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
+        if coord.shape[1] == 4:
+            mask = (coord[:, 0] == batch_index)
+        else:
+            mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
         coord = coord[mask]
         _data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
 
@@ -65,3 +67,25 @@ class Visualizer():
         plt.show()
 
         return True
+    
+    @staticmethod
+    def visualize_json(file_path,
+                       time_index
+                       ):
+        
+        with open(file_path, 'r') as f:
+            point_cloud = json.load(f)
+
+        point_cloud = np.array(point_cloud[time_index])
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
+
+        ax.grid(False)
+        ax.axis('off')
+
+        plt.show()
+
+        

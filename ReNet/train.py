@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
+import os
+import json
 import torch
 import torch.nn as nn
 import numpy as np
@@ -11,21 +13,30 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 from EnvioX.TrainDataGenerator import TrainDataGenerator as DG # type: ignore
 from EnvioX.TerrainGenerator import TerrainGenerator as TG # type: ignore
 from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP # type: ignore
+from EnvioX.Visualizer import Visualizer # type: ignore
 
 class ReNetDataset(Dataset):
 
-    def __init__(self, input_data_list, targets_list, mode):
-        self.input_data_list = input_data_list
-        self.targets_list = targets_list
+    def __init__(self, data_path, mode):
+        self.inputs_path = os.path.join(data_path, 'inputs')
+        self.targets_path = os.path.join(data_path, 'targets')
         self.mode = mode
     
     def __len__(self):
-        return len(self.input_data_list)
+        return sum(1 for entry in os.scandir(self.inputs_path) if entry.is_file())
     
     def __getitem__(self, idx):
 
-        input0 = self.input_data_list[idx][1]
-        input1 = self.input_data_list[idx][0]
+        input_path = os.path.join(self.inputs_path, f'input_{idx + 1}.json')
+        target_path = os.path.join(self.targets_path, f'target_{idx + 1}.json')
+
+        with open(input_path, 'r') as f:
+            input = json.load(f)
+        with open(target_path, 'r') as f:
+            target = json.load(f)
+
+        input0 = np.array(input[0])
+        input1 = np.array(input[1])
         coords0, feats0 = TG.voxelize_pc(input0, 64, time_index=0)
         coords1, feats1 = TG.voxelize_pc(input1, 64, time_index=1)
         coords = np.vstack([coords0, coords1])
@@ -34,13 +45,19 @@ class ReNetDataset(Dataset):
         coords = torch.from_numpy(coords).to(dtype=torch.int)
         feats = torch.from_numpy(feats).to(dtype=torch.float32)
 
-        gt0 = self.targets_list[idx][1]
-        gt1 = self.targets_list[idx][0]
-        final_target, list_of_targets = DG.genarate_target(gt0, gt1, self.mode)
+        target0 = np.array(target[0])
+        target1 = np.array(target[1])
+        
+        final_target, list_of_targets = DG.genarate_target(target0,
+                                                           target1,
+                                                           self.mode
+                                                           )
         
         return (coords, feats), (final_target, list_of_targets)
 
-def mean_euclidean_distance(output, target):
+def mean_euclidean_distance(output,
+                            target
+                            ):
 
     diff = (output - target) ** 2
     sum_diff = torch.sum(diff, dim=1)
@@ -62,10 +79,19 @@ def ReNet_collate_fn(batch):
     
     return (coords, feats), (final_targets, list_of_targets)
 
-def ReNet_train(model, mode, dataloaders, optimizer, scheduler, num_epochs, check_progress):
+def ReNet_train(model,
+                mode,
+                dataloader,
+                optimizer,
+                scheduler,
+                num_epochs,
+                check_progress
+                ):
 
-    print("Train start")
-
+    print("-----------------------------------------")
+    print("           ReNet train start             ")
+    print("-----------------------------------------")
+    
     model.train()
     
     bce_loss_fn = nn.BCELoss()
@@ -73,123 +99,108 @@ def ReNet_train(model, mode, dataloaders, optimizer, scheduler, num_epochs, chec
     
     for epoch in range(num_epochs):
 
-        total_loss1 = 0.0
-        dataloader_index = 1
+        running_loss = 0.0
 
-        for dataloader in dataloaders:
-        
-            total_loss2 = 0.0
-            batch_index = 1
+        batch_index = 1
 
-            for batch in dataloader:
+        for batch in dataloader:
 
-                input_data, targets = batch
-                coords, feats = input_data
-                final_target, target_list = targets
+            input_data, targets = batch
+            coords, feats = input_data
+            final_target, target_list = targets
 
-                if torch.cuda.is_available():
-                    device = 'cuda'
-                else:
-                    device = 'cpu'
+            if torch.cuda.is_available():
+                device = 'cuda'
+            else:
+                device = 'cpu'
 
-                input_data = ME.SparseTensor(features=feats, coordinates=coords, device=device)
+            input_data = ME.SparseTensor(features=feats, coordinates=coords, device=device)
                 
-                final_output, output_list = model(input_data)
-                final_output = SP.sparse_to_dense_with_size(final_output, 64)
-                final_output = final_output.squeeze()
+            final_output, output_list = model(input_data)
+            final_output = SP.sparse_to_dense_with_size(final_output, 64)
+            final_output = final_output.squeeze()
                 
-                med_loss = euclidean_loss_fn(final_output, final_target)
+            med_loss = euclidean_loss_fn(final_output, final_target)
                 
-                total_bce_loss = 0
+            total_bce_loss = 0
 
-                for output, target in zip(output_list,target_list):
-                    output, _, _ = output.dense()
-                    output = SP.dense_to_sparse(output)
-                    b = output.C[:, 0]
-                    x = output.C[:, 1]
-                    y = output.C[:, 2]
-                    z = output.C[:, 3]
-                    if mode == 1:
-                        t = output.C[:, 4]
-                        target = target[b, x, y, z, t]
-                    elif mode == 2:
-                        target = target[b, x, y, z]
-                    total_bce_loss += bce_loss_fn(output.F.squeeze(), target)
-                                
-                loss = med_loss + total_bce_loss
-                
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                
-                total_loss2 += loss.item()
-                
-                if check_progress:
-                    print(f"Epoch [{epoch+1}/{num_epochs}], batch [{batch_index}/{len(dataloader)}] of datarloader [{dataloader_index}/{len(dataloaders)}]")
-                batch_index += 1
+            for output, target in zip(output_list,target_list):
+                output, _, _ = output.dense()
+                output = SP.dense_to_sparse(output)
+                b = output.C[:, 0]
+                x = output.C[:, 1]
+                y = output.C[:, 2]
+                z = output.C[:, 3]
+                if mode == 1:
+                    t = output.C[:, 4]
+                    target = target[b, x, y, z, t]
+                elif mode == 2:
+                    target = target[b, x, y, z]
+
+                total_bce_loss += bce_loss_fn(output.F.squeeze(), target)
             
-            total_loss2 = total_loss2/len(dataloader)
-            total_loss1 += total_loss2
-
-            dataloader_index += 1
+            loss = med_loss + total_bce_loss
+                
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item()
+                
+            if check_progress:
+                print(f"Epoch [{epoch+1}/{num_epochs}], batch [{batch_index}/{len(dataloader)}]")
+            batch_index += 1
+            
+        epoch_loss = running_loss / len(dataloader)
         
         print("-----------------------------------------")
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss1/len(dataloaders)}")
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss}")
         print("-----------------------------------------")
 
         scheduler.step()
 
-def ReNet_evaluation(model, dataloaders):
+def visual_model_evaluation(model,
+                            model_path,
+                            test_data_path,
+                            test_index
+                            ):
+
+    model.load_state_dict(torch.load(model_path))
     model.eval()
-    
-    euclidean_loss_fn = mean_euclidean_distance
-    
-    total_loss1 = 0.0
-    
-    all_preds = []
-    all_targets = []
+
+    input_path = os.path.join(test_data_path, f'inputs/input_{test_index}.json')
+    target_path = os.path.join(test_data_path, f'targets/target_{test_index}.json')
+
+    with open(input_path, 'r') as f:
+        input = json.load(f)
+    with open(target_path, 'r') as f:
+        target = json.load(f)
+
+    input0 = np.array(input[0])
+    input1 = np.array(input[1])
+    coords0, feats0 = TG.voxelize_pc(input0, 64, time_index=0)
+    coords1, feats1 = TG.voxelize_pc(input1, 64, time_index=1)
+    coords = np.vstack([coords0, coords1])
+    feats = np.vstack([feats0, feats1])
+
+    coords = torch.from_numpy(coords).to(dtype=torch.int)
+    feats = torch.from_numpy(feats).to(dtype=torch.float32)
+
+    coords, feats = ME.utils.sparse_collate([coords], [feats])
+
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
+    input = ME.SparseTensor(features=feats, coordinates=coords, device=device)
 
     with torch.no_grad():
-        for dataloader in dataloaders:
-            
-            total_loss2 = 0.0
+        output, _ = model(input)
 
-            for batch in dataloader:
-                
-                input_data, targets = batch
-                coords, feats = input_data
-                final_target, _ = targets
-                
-                input_data = ME.SparseTensor(features=feats, coordinates=coords)
-                
-                final_output, _ = model(input_data)
-                final_output = SP.sparse_to_dense_with_size(final_output, 64)
-                
-                med_loss = euclidean_loss_fn(final_output, final_target)
-                
-                total_loss2 += med_loss.item()
+    target0 = np.array(target[0])
+    coords_t, _ = TG.voxelize_pc(target0, 64, time_index=None)
 
-                final_pred = torch.argmax(final_output, dim=1)
-
-                final_pred = final_pred.view(-1).cpu().numpy()
-                final_target = final_target.view(-1).cpu().numpy()
-                
-                all_preds.extend(final_pred)
-                all_targets.extend(final_target)
-
-            total_loss2 = total_loss2 / len(dataloader)
-            total_loss1 += total_loss2
-
-    avg_loss = total_loss1 / len(dataloaders)
+    Visualizer.visualize_sparse_tensor(output, 64)
+    Visualizer.visualize_voxel(coords_t, 64)
     
-    precision = precision_score(all_targets, all_preds, average='macro')
-    recall = recall_score(all_targets, all_preds, average='macro')
-    f1 = f1_score(all_targets, all_preds, average='macro')
-
-    print(f"Evaluation Loss: {avg_loss}")
-    print(f"Precision: {precision}")
-    print(f"Recall: {recall}")
-    print(f"F1 Score: {f1}")
-    
-    return avg_loss, precision, recall, f1
-
