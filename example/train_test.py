@@ -41,10 +41,10 @@ gamma = (lr_f / lr_i) ** (1 / num_epochs)
 scheduler = ExponentialLR(optimizer, gamma=gamma)
 
 save_model = True
-model_path = "/Users/baeg-yujin/Desktop/Study/Univ/research/DRCD/code/test/ReNet_parameters.pth"
+model_path = ""
 
 generate_new_data = True
-data_path = "/Users/baeg-yujin/Desktop/Study/Univ/research/DRCD/data"
+data_path = "data"
 os.makedirs(data_path, exist_ok=True)
 
 train_data_path = os.path.join(data_path, 'train')
@@ -62,7 +62,6 @@ sensor_config = {'tilt_angle': 30,
                  }
 
 if generate_new_data:
-
     DG.generate_dataset(grid_size=20,
                         detection_range=3.2,
                         robot_size=[0.4, 1.0, 0.8],
@@ -70,10 +69,11 @@ if generate_new_data:
                         sensor_config=sensor_config,
                         point_density=15,
                         num_env_configs=2,
-                        num_data_per_env=10,
+                        num_data_per_env=3,
                         num_time_step=2,
                         time_step=0.2,
-                        save_path=train_data_path
+                        save_path=train_data_path,
+                        mode=mode
                         )
 
     DG.generate_dataset(grid_size=20,
@@ -86,7 +86,8 @@ if generate_new_data:
                         num_data_per_env=2,
                         num_time_step=2,
                         time_step=0.2,
-                        save_path=test_data_path
+                        save_path=test_data_path,
+                        mode='test'
                         )
     print("-----------------------------------------")
     print("           Data is generated             ")

@@ -35,23 +35,25 @@ class ReNetDataset(Dataset):
         with open(target_path, 'r') as f:
             target = json.load(f)
 
-        input0 = np.array(input[0])
-        input1 = np.array(input[1])
-        coords0, feats0 = TG.voxelize_pc(input0, 64, time_index=0)
-        coords1, feats1 = TG.voxelize_pc(input1, 64, time_index=1)
-        coords = np.vstack([coords0, coords1])
-        feats = np.vstack([feats0, feats1])
+        coords0_i, feats0_i = torch.tensor(input[0]), torch.tensor(input[1])
+        coords0_t, feats0_t = torch.tensor(target[0][0]), torch.tensor(target[0][1])
+        coords1_t, feats1_t = torch.tensor(target[1][0]), torch.tensor(target[1][1])
 
-        coords = torch.from_numpy(coords).to(dtype=torch.int)
-        feats = torch.from_numpy(feats).to(dtype=torch.float32)
+        coords = torch.vstack([coords0_i, coords1_t])
+        coords = coords.to(dtype=torch.int)
+        feats = torch.vstack([feats0_i, feats1_t])
+        feats = feats.to(dtype=torch.float32)
 
-        target0 = np.array(target[0])
-        target1 = np.array(target[1])
-        
-        final_target, list_of_targets = DG.genarate_target(target0,
-                                                           target1,
-                                                           self.mode
-                                                           )
+        coords0_t, feats0_t = ME.utils.sparse_collate([coords0_t], [feats0_t])
+        final_target = ME.SparseTensor(features=feats0_t, coordinates=coords0_t)
+        final_target = SP.sparse_to_dense_with_size(final_target, 64)
+        final_target = final_target.squeeze()
+
+        list_of_targets = []
+        for i in range(4):
+            t = target[2][i]
+            t = torch.tensor(t, dtype=torch.float32)
+            list_of_targets.append(t)
         
         return (coords, feats), (final_target, list_of_targets)
 
@@ -176,15 +178,14 @@ def visual_model_evaluation(model,
     with open(target_path, 'r') as f:
         target = json.load(f)
 
-    input0 = np.array(input[0])
-    input1 = np.array(input[1])
-    coords0, feats0 = TG.voxelize_pc(input0, 64, time_index=0)
-    coords1, feats1 = TG.voxelize_pc(input1, 64, time_index=1)
-    coords = np.vstack([coords0, coords1])
-    feats = np.vstack([feats0, feats1])
+    coords0_i, feats0_i = torch.tensor(input[0]), torch.tensor(input[1])
+    coords0_t, _ = torch.tensor(target[0][0]), torch.tensor(target[0][1])
+    coords1_t, feats1_t = torch.tensor(target[1][0]), torch.tensor(target[1][1])
 
-    coords = torch.from_numpy(coords).to(dtype=torch.int)
-    feats = torch.from_numpy(feats).to(dtype=torch.float32)
+    coords = torch.vstack([coords0_i, coords1_t])
+    coords = coords.to(dtype=torch.int)
+    feats = torch.vstack([feats0_i, feats1_t])
+    feats = feats.to(dtype=torch.float32)
 
     coords, feats = ME.utils.sparse_collate([coords], [feats])
 
@@ -198,9 +199,6 @@ def visual_model_evaluation(model,
     with torch.no_grad():
         output, _ = model(input)
 
-    target0 = np.array(target[0])
-    coords_t, _ = TG.voxelize_pc(target0, 64, time_index=None)
-
     Visualizer.visualize_sparse_tensor(output, 64)
-    Visualizer.visualize_voxel(coords_t, 64)
+    Visualizer.visualize_voxel(coords0_t, 64)
     

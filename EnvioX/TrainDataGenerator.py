@@ -61,6 +61,7 @@ class TrainDataGenerator():
                          num_time_step,
                          time_step,
                          save_path,
+                         mode
                          ):
 
         env_configs = TG.generate_env_configs(grid_size,
@@ -117,19 +118,47 @@ class TrainDataGenerator():
                                                  sensor_config
                                                  )
                     
-                    input1 = TG.senser_detection(target1,
-                                                 detection_range,
-                                                 robot_size,
-                                                 sensor_config
-                                                 )
-                    
-                    target0 = target0.tolist()
-                    target1 = target1.tolist()
-                    target = [target0, target1]
+                    coords0_i, feats0_i = TG.voxelize_pc(input0, 64, time_index=0)
+                    coords0_t, feats0_t = TG.voxelize_pc(target0, 64, time_index=0)
+                    coords1_t, feats1_t = TG.voxelize_pc(target1, 64, time_index=1)
 
-                    input0 = input0.tolist()
-                    input1 = input1.tolist()
-                    input = [input0, input1]
+                    coords0_i = coords0_i.tolist()
+                    feats0_i = feats0_i.tolist()
+                    coords0_t = coords0_t.tolist()
+                    feats0_t = feats0_t.tolist()
+                    coords1_t = coords1_t.tolist()
+                    feats1_t = feats1_t.tolist()
+
+
+                    if mode == 'test':
+                        target = [[coords0_t, feats0_t], [coords1_t, feats1_t]]
+
+                    else:
+                        targets = []
+                        if mode == 1:
+                            for i in range(4):
+                                size = 2**(3+i)
+                                coords0, _ = TG.voxelize_pc(target0, size, time_index=0)
+                                coords1, _ = TG.voxelize_pc(target1, size, time_index=1)
+                                coords = np.vstack([coords0, coords1])
+                                coords = torch.tensor(coords)
+                                target = torch.zeros((size, size, size, 2), dtype=torch.float32)
+                                target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
+                                target = target.tolist()
+                                targets.append(target)
+                        elif mode == 2:
+                            for i in range(4):
+                                size = 2**(3+i)
+                                coords0, _ = TG.voxelize_pc(target0, size, time_index=None)
+                                coords = torch.tensor(coords0)
+                                target = torch.zeros((size, size, size), dtype=torch.float32)
+                                target[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
+                                target = target.tolist()
+                                targets.append(target)
+                        
+                        target = [[coords0_t, feats0_t], [coords1_t, feats1_t], targets]
+
+                    input = [coords0_i, feats0_i]
 
                     num_data += 1
                     num_total_data += 1

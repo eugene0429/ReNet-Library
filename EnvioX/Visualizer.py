@@ -49,17 +49,17 @@ class Visualizer():
         return True
     
     @staticmethod
-    def visualize_voxel(data,
+    def visualize_voxel(coords,
                         voxel_resolution
                         ):
 
-        _data = np.zeros([voxel_resolution, voxel_resolution, voxel_resolution])
-        _data[data[:, 0], data[:, 1], data[:, 2]] = 1
+        data = np.zeros([voxel_resolution, voxel_resolution, voxel_resolution])
+        data[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.voxels(_data, edgecolor='k')
+        ax.voxels(data, edgecolor='k')
 
         ax.grid(False)
         ax.axis('off')
@@ -69,23 +69,28 @@ class Visualizer():
         return True
     
     @staticmethod
-    def visualize_json(file_path,
-                       time_index
-                       ):
+    def visualize_json(file_path):
         
         with open(file_path, 'r') as f:
-            point_cloud = json.load(f)
+            data = json.load(f)
 
-        point_cloud = np.array(point_cloud[time_index])
+        if len(data) == 2:
+            coords = data[0]
+        else:
+            coords = data[0][0]
+
+        coords = np.array(coords)
+
+        data = np.zeros([64, 64, 64])
+        data[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
+        ax.voxels(data, edgecolor='k')
 
         ax.grid(False)
         ax.axis('off')
 
         plt.show()
-
         
