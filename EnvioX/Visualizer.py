@@ -21,25 +21,25 @@ class Visualizer():
         return True
     
     @staticmethod
-    def visualize_sparse_tensor(data,
+    def visualize_sparse_tensor(sparse_tensor,
                                 voxel_resolution,
                                 batch_index=0,
                                 time_index=0
                                 ):
 
-        _data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
-        coord = data.C
+        data = torch.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
+        coord = sparse_tensor.C
         if coord.shape[1] == 4:
             mask = (coord[:, 0] == batch_index)
         else:
             mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
         coord = coord[mask]
-        _data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
+        data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        ax.voxels(_data, edgecolor='k')
+        ax.voxels(data, edgecolor='k')
 
         ax.grid(False)
         ax.axis('off')
