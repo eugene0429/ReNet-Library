@@ -80,7 +80,9 @@ class SparseTensorProcessor():
         non_zero_coords = coords[non_zero_mask]
         non_zero_features = dense_tensor[non_zero_mask]
 
-        sparse_tensor = ME.SparseTensor(features=non_zero_features.float(), coordinates=non_zero_coords.int())
+        sparse_tensor = ME.SparseTensor(features=non_zero_features.float(),
+                                        coordinates=non_zero_coords.int()
+                                        )
 
         return sparse_tensor
 

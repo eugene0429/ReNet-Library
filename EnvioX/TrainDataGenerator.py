@@ -1,133 +1,132 @@
 import numpy as np
 import torch
-import MinkowskiEngine as ME
-from .SparseTensorProcessor import SparseTensorProcessor as SP
 from .TerrainGenerator import TerrainGenerator as TG
 import json
 import os
-
-class TrainDataGenerator():
     
-    @staticmethod
-    def generate_dataset(grid_size,
-                         detection_range,
-                         robot_size,
-                         robot_speed,
-                         sensor_config,
-                         point_density,
-                         num_env_configs,
-                         num_data_per_env,
-                         num_time_step,
-                         time_step,
-                         save_path,
-                         mode
-                         ):
+def generate_dataset(grid_size,
+                     detection_range,
+                     robot_size,
+                     robot_speed,
+                     sensor_config,
+                     point_density,
+                     num_env_configs,
+                     num_robot_per_env,
+                     num_time_steps,
+                     time_step_size,
+                     model_mode,
+                     save_path,
+                     data_type
+                     ):
 
-        env_configs = TG.generate_env_configs(grid_size,
-                                              point_density,
-                                              num_env_configs
-                                              )
+    env_configs = TG.generate_env_configs(grid_size,
+                                          point_density,
+                                          num_env_configs
+                                          )
+    
+    targets_path = os.path.join(save_path, 'targets')
+    inputs_path = os.path.join(save_path, 'inputs')
+    os.makedirs(targets_path, exist_ok=True)
+    os.makedirs(inputs_path, exist_ok=True)
+
+    data_idx = 0
+
+    for env_config in env_configs:
         
-        targets_path = os.path.join(save_path, 'targets')
-        inputs_path = os.path.join(save_path, 'inputs')
-        os.makedirs(targets_path, exist_ok=True)
-        os.makedirs(inputs_path, exist_ok=True)
+        env = TG.generate_environment(env_config)
+        num_robot = 0
 
-        num_total_data = 0
-
-        for env_config in env_configs:
+        while(num_robot<num_robot_per_env):
             
-            env = TG.generate_environment(env_config)
-            num_data = 0
+            robot_positions, _ = TG.generate_robot_configs(grid_size,
+                                                           detection_range,
+                                                           robot_size,
+                                                           robot_speed,
+                                                           num_time_steps,
+                                                           time_step_size
+                                                           )
+            for i in range(1, len(robot_positions)):
+                robot_position0 = robot_positions[i]
+                robot_position1 = robot_positions[i-1]
 
-            while(num_data<num_data_per_env):
+                target0 = TG.filter_points_in_detection_area(env,
+                                                             detection_range,
+                                                             robot_size,
+                                                             robot_position0
+                                                             )
+                                    
+                if target0 is None:
+                    continue
                 
-                robot_positions, _ = TG.generate_robot_configs(grid_size,
-                                                               detection_range,
-                                                               robot_size,
-                                                               robot_speed,
-                                                               num_time_step,
-                                                               time_step
-                                                               )
-                for i in range(1, len(robot_positions)):
-                    robot_position0 = robot_positions[i]
-                    robot_position1 = robot_positions[i-1]
+                target1 = TG.filter_points_in_detection_area(env,
+                                                             detection_range,
+                                                             robot_size,
+                                                             robot_position1
+                                                             )
+                
+                if target1 is None:
+                    continue
 
-                    target0 = TG.filter_points_in_detection_area(env,
-                                                                 detection_range,
-                                                                 robot_size,
-                                                                 robot_position0
-                                                                 )
-                                        
-                    if target0 is None:
-                        continue
+                input0 = TG.senser_detection(target0,
+                                             detection_range,
+                                             robot_size,
+                                             sensor_config
+                                             )
+                
+                coords0_i, feats0_i = TG.voxelize_pc(input0, 64, time_index=0)
+                coords0_t, feats0_t = TG.voxelize_pc(target0, 64, time_index=0)
+                coords1_t, feats1_t = TG.voxelize_pc(target1, 64, time_index=1)
+
+                coords0_i = coords0_i.tolist()
+                feats0_i = feats0_i.tolist()
+                coords0_t = coords0_t.tolist()
+                feats0_t = feats0_t.tolist()
+                coords1_t = coords1_t.tolist()
+                feats1_t = feats1_t.tolist()
+
+                if data_type == 'test' or data_type == 'val':
+                    target = [[coords0_t, feats0_t], [coords1_t, feats1_t]]
+
+                elif data_type == 'train':
+                    targets = []
+                    if model_mode == 1:
+                        for i in range(4):
+                            size = 2**(3+i)
+                            coords0, _ = TG.voxelize_pc(target0, size, time_index=0)
+                            coords1, _ = TG.voxelize_pc(target1, size, time_index=1)
+                            coords = np.vstack([coords0, coords1])
+                            coords = torch.tensor(coords).long()
+                            target = torch.zeros((size, size, size, 2), dtype=torch.float32)
+                            target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
+                            target = target.tolist()
+                            targets.append(target)
+                    elif model_mode == 2:
+                        for i in range(4):
+                            size = 2**(3+i)
+                            coords0, _ = TG.voxelize_pc(target0, size, time_index=None)
+                            coords = torch.tensor(coords0).long()
+                            target = torch.zeros((size, size, size), dtype=torch.float32)
+                            target[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
+                            target = target.tolist()
+                            targets.append(target)
                     
-                    target1 = TG.filter_points_in_detection_area(env,
-                                                                 detection_range,
-                                                                 robot_size,
-                                                                 robot_position1
-                                                                 )
-                    
-                    if target1 is None:
-                        continue
+                    target = [[coords0_t, feats0_t], [coords1_t, feats1_t], targets]
+                else:
+                    print("data_type should be 'train' or 'val' or 'test'")
+                    return False
 
-                    input0 = TG.senser_detection(target0,
-                                                 detection_range,
-                                                 robot_size,
-                                                 sensor_config
-                                                 )
-                    
-                    coords0_i, feats0_i = TG.voxelize_pc(input0, 64, time_index=0)
-                    coords0_t, feats0_t = TG.voxelize_pc(target0, 64, time_index=0)
-                    coords1_t, feats1_t = TG.voxelize_pc(target1, 64, time_index=1)
+                input = [coords0_i, feats0_i]
 
-                    coords0_i = coords0_i.tolist()
-                    feats0_i = feats0_i.tolist()
-                    coords0_t = coords0_t.tolist()
-                    feats0_t = feats0_t.tolist()
-                    coords1_t = coords1_t.tolist()
-                    feats1_t = feats1_t.tolist()
+                num_robot += 1
+                data_idx += 1
+                
+                target_path = os.path.join(targets_path, f'target_{data_idx}.json')
+                input_path = os.path.join(inputs_path, f'input_{data_idx}.json')
 
-                    if mode == 'test':
-                        target = [[coords0_t, feats0_t], [coords1_t, feats1_t]]
+                with open(target_path, 'w') as f:
+                    json.dump(target, f)
 
-                    else:
-                        targets = []
-                        if mode == 1:
-                            for i in range(4):
-                                size = 2**(3+i)
-                                coords0, _ = TG.voxelize_pc(target0, size, time_index=0)
-                                coords1, _ = TG.voxelize_pc(target1, size, time_index=1)
-                                coords = np.vstack([coords0, coords1])
-                                coords = torch.tensor(coords)
-                                target = torch.zeros((size, size, size, 2), dtype=torch.float32)
-                                target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
-                                target = target.tolist()
-                                targets.append(target)
-                        elif mode == 2:
-                            for i in range(4):
-                                size = 2**(3+i)
-                                coords0, _ = TG.voxelize_pc(target0, size, time_index=None)
-                                coords = torch.tensor(coords0)
-                                target = torch.zeros((size, size, size), dtype=torch.float32)
-                                target[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
-                                target = target.tolist()
-                                targets.append(target)
-                        
-                        target = [[coords0_t, feats0_t], [coords1_t, feats1_t], targets]
+                with open(input_path, 'w') as f:
+                    json.dump(input, f)
 
-                    input = [coords0_i, feats0_i]
-
-                    num_data += 1
-                    num_total_data += 1
-                    
-                    target_path = os.path.join(targets_path, f'target_{num_total_data}.json')
-                    input_path = os.path.join(inputs_path, f'input_{num_total_data}.json')
-
-                    with open(target_path, 'w') as f:
-                        json.dump(target, f)
-
-                    with open(input_path, 'w') as f:
-                        json.dump(input, f)
-
-        return True
+    return True
