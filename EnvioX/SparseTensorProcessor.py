@@ -20,13 +20,19 @@ class SparseTensorProcessor():
     def sparse_to_dense_with_size(sparse_tensor, size):
         coordinates = sparse_tensor.C
         features = sparse_tensor.F
+        
+        if torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+
         if coordinates.shape[1]==4:
-            max_coordinates = torch.tensor([0] + [size - 1] * 3, dtype=torch.int)
+            max_coordinates = torch.tensor([0] + [size - 1] * 3, dtype=torch.int).to(device)
         elif coordinates.shape[1]==5:
-            max_coordinates = torch.tensor([0] + [size - 1] * 3 + [0], dtype=torch.int)
+            max_coordinates = torch.tensor([0] + [size - 1] * 3 + [0], dtype=torch.int).to(device)
         
         if not (coordinates == max_coordinates).all(dim=1).any():
-            zero_feature = torch.zeros((1, features.shape[1]), dtype=features.dtype)
+            zero_feature = torch.zeros((1, features.shape[1]), dtype=features.dtype).to(device)
             
             coordinates = torch.cat((coordinates, max_coordinates.unsqueeze(0)), dim=0)
             features = torch.cat((features, zero_feature), dim=0)
@@ -75,13 +81,21 @@ class SparseTensorProcessor():
         else:
             raise ValueError("input_dimension must be either 3 or 4")
 
+        if torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+
         non_zero_mask = torch.any(dense_tensor != 0, dim=1)
 
         non_zero_coords = coords[non_zero_mask]
+        non_zero_coords = non_zero_coords.to(torch.int).to(device)
         non_zero_features = dense_tensor[non_zero_mask]
+        non_zero_features = non_zero_features.to(torch.float32).to(device)
 
-        sparse_tensor = ME.SparseTensor(features=non_zero_features.float(),
-                                        coordinates=non_zero_coords.int()
+        sparse_tensor = ME.SparseTensor(features=non_zero_features,
+                                        coordinates=non_zero_coords,
+                                        device=device
                                         )
 
         return sparse_tensor
@@ -99,18 +113,23 @@ class SparseTensorProcessor():
         num_features_B = tensor_B.F.shape[1]
         concatenated_features = []
 
+        if torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+
         for coord in all_coords:
             coord_tuple = tuple(coord.tolist())
             features_A = tensor_A.F[dict_A[coord_tuple]] if coord_tuple in dict_A else torch.zeros(num_features_A)
             features_B = tensor_B.F[dict_B[coord_tuple]] if coord_tuple in dict_B else torch.zeros(num_features_B)
-            concatenated_features.append(torch.cat([features_A, features_B], dim=0))
+            concatenated_features.append(torch.cat([features_A.to(device), features_B.to(device)], dim=0))
         
         concatenated_features = torch.stack(concatenated_features)
 
         out = ME.SparseTensor(
             features=concatenated_features, 
             coordinates=all_coords, 
-            device=tensor_A.device,
+            device=device,
             tensor_stride=stride,
             coordinate_manager=tensor_A.coordinate_manager
         )

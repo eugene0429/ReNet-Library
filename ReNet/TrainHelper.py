@@ -32,17 +32,25 @@ class ReNetDataset(Dataset):
         with open(target_path, 'r') as f:
             target = json.load(f)
 
+        if torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+
         coords0_i, feats0_i = torch.tensor(input[0]), torch.tensor(input[1])
         coords0_t, feats0_t = torch.tensor(target[0][0]), torch.tensor(target[0][1])
         coords1_t, feats1_t = torch.tensor(target[1][0]), torch.tensor(target[1][1])
 
         coords = torch.vstack([coords0_i, coords1_t])
-        coords = coords.to(dtype=torch.int)
+        coords = coords.to(torch.int).to(device)
         feats = torch.vstack([feats0_i, feats1_t])
-        feats = feats.to(dtype=torch.float32)
+        feats = feats.to(torch.float32).to(device)
 
         coords0_t, feats0_t = ME.utils.sparse_collate([coords0_t], [feats0_t])
-        final_target = ME.SparseTensor(features=feats0_t, coordinates=coords0_t)
+        final_target = ME.SparseTensor(features=feats0_t.to(device),
+                                       coordinates=coords0_t.to(device),
+                                       device=device
+                                       )
         final_target = SP.sparse_to_dense_with_size(final_target, 64)
         final_target = final_target.squeeze()
 
@@ -50,7 +58,7 @@ class ReNetDataset(Dataset):
             list_of_targets = []
             for i in range(4):
                 t = target[2][i]
-                t = torch.tensor(t, dtype=torch.float32)
+                t = torch.tensor(t, dtype=torch.float32, device=device)
                 list_of_targets.append(t)
             
             return (coords, feats), (final_target, list_of_targets)
@@ -130,8 +138,8 @@ def ReNet_train(model,
 
             model = model.to(device)
 
-            input_data = ME.SparseTensor(features=feats,
-                                         coordinates=coords,
+            input_data = ME.SparseTensor(features=feats.to(device),
+                                         coordinates=coords.to(device),
                                          device=device
                                          )
             

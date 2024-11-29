@@ -95,8 +95,7 @@ def generate_dataset(grid_size,
                             coords0, _ = TG.voxelize_pc(target0, size, time_index=0)
                             coords1, _ = TG.voxelize_pc(target1, size, time_index=1)
                             coords = np.vstack([coords0, coords1])
-                            coords = torch.tensor(coords).long()
-                            target = torch.zeros((size, size, size, 2), dtype=torch.float32)
+                            target = np.zeros((size, size, size, 2))
                             target[coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]] = 1
                             target = target.tolist()
                             targets.append(target)
@@ -104,9 +103,8 @@ def generate_dataset(grid_size,
                         for i in range(4):
                             size = 2**(3+i)
                             coords0, _ = TG.voxelize_pc(target0, size, time_index=None)
-                            coords = torch.tensor(coords0).long()
-                            target = torch.zeros((size, size, size), dtype=torch.float32)
-                            target[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
+                            target = np.zeros((size, size, size))
+                            target[coords0[:, 0], coords0[:, 1], coords0[:, 2]] = 1
                             target = target.tolist()
                             targets.append(target)
                     
@@ -117,7 +115,6 @@ def generate_dataset(grid_size,
 
                 input = [coords0_i, feats0_i]
 
-                num_robot += 1
                 data_idx += 1
                 
                 target_path = os.path.join(targets_path, f'target_{data_idx}.json')
@@ -128,5 +125,7 @@ def generate_dataset(grid_size,
 
                 with open(input_path, 'w') as f:
                     json.dump(input, f)
+            
+            num_robot += 1
 
     return True

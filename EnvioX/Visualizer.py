@@ -30,13 +30,12 @@ class Visualizer():
                                 ):
 
         data = np.zeros((voxel_resolution, voxel_resolution, voxel_resolution))
-        coord = sparse_tensor.C
+        coord = sparse_tensor.C.cpu().numpy()
         if coord.shape[1] == 4:
             mask = (coord[:, 0] == batch_index)
         else:
             mask = (coord[:, 0] == batch_index) & (coord[:, 4] == time_index)
         coord = coord[mask]
-        coord = coord.long()
         data[coord[:, 1], coord[:, 2], coord[:, 3]] = 1
 
         fig = plt.figure()
@@ -57,7 +56,9 @@ class Visualizer():
                         ):
 
         data = np.zeros([voxel_resolution, voxel_resolution, voxel_resolution])
-        coords = coords.long()
+        
+        if torch.is_tensor(coords):
+            coords = coords.long()
         data[coords[:, 0], coords[:, 1], coords[:, 2]] = 1
 
         fig = plt.figure()
@@ -78,10 +79,10 @@ class Visualizer():
         with open(file_path, 'r') as f:
             data = json.load(f)
 
-        if len(data) == 2:
-            coords = data[0]
-        else:
+        if len(data[0]) == 2:
             coords = data[0][0]
+        else:
+            coords = data[0]
 
         coords = np.array(coords)
 

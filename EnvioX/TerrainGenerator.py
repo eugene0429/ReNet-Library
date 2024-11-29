@@ -246,7 +246,8 @@ def _generate_sensors(tilt_angle,
 
 def _noisify_point_cloud(point_cloud,
                          robot_size, 
-                         detection_range
+                         detection_range,
+                         add_clusters=False
                          ):
 
     POS_NOISE_RANGE = 0.05
@@ -272,25 +273,26 @@ def _noisify_point_cloud(point_cloud,
     keep_indices = np.random.choice(point_cloud.shape[0], size=int((1-PRUNING_PERCENTAGE) * point_cloud.shape[0]), replace=False)
     point_cloud = point_cloud[keep_indices, :]
 
-    cluster_center_range = [[- detection_range / 2.5, detection_range / 2.5],
-                            [- detection_range / 2.5, detection_range / 2.5],
-                            [0, detection_range / 2]]
+    if add_clusters:
+        cluster_center_range = [[- detection_range / 2.5, detection_range / 2.5],
+                                [- detection_range / 2.5, detection_range / 2.5],
+                                [0, detection_range / 2]]
 
-    num_clusters = 0
-    while(num_clusters < NUM_CLUSTERS):
-        cluster_center = np.array([random.uniform(cluster_center_range[0][0], cluster_center_range[0][1]),
-                                   random.uniform(cluster_center_range[1][0], cluster_center_range[1][1]),
-                                   random.uniform(cluster_center_range[2][0], cluster_center_range[2][1])])
-        if _check_vaildation(cluster_center,
-                             np.array([0, 0, 0]),
-                             robot_size,
-                             detection_range
-                             ):
-            continue
+        num_clusters = 0
+        while(num_clusters < NUM_CLUSTERS):
+            cluster_center = np.array([random.uniform(cluster_center_range[0][0], cluster_center_range[0][1]),
+                                    random.uniform(cluster_center_range[1][0], cluster_center_range[1][1]),
+                                    random.uniform(cluster_center_range[2][0], cluster_center_range[2][1])])
+            if _check_vaildation(cluster_center,
+                                np.array([0, 0, 0]),
+                                robot_size,
+                                detection_range
+                                ):
+                continue
 
-        cluster_points = cluster_center + np.random.normal(scale=0.08, size=(POINTS_PER_CLUSER, 3))
-        point_cloud = np.vstack((point_cloud, cluster_points))
-        num_clusters += 1
+            cluster_points = cluster_center + np.random.normal(scale=0.08, size=(POINTS_PER_CLUSER, 3))
+            point_cloud = np.vstack((point_cloud, cluster_points))
+            num_clusters += 1
         
     return point_cloud
 
@@ -352,15 +354,15 @@ class TerrainGenerator():
                                detection_range, 
                                robot_size, 
                                robot_speed, 
-                               num_time_step,
+                               num_time_steps,
                                time_step
                                ):
         
-        range_value = grid_size / 2 - detection_range
+        range_value = grid_size / 2 - detection_range / 2 - num_time_steps*time_step*robot_speed
 
         robot_positions = []
         robot_yaws = []
-        for i in range(num_time_step + 1):
+        for i in range(num_time_steps + 1):
             if i==0:
                 robot_position = np.array([random.uniform(-range_value, range_value), 
                                            random.uniform(-range_value, range_value), 
@@ -374,7 +376,7 @@ class TerrainGenerator():
             else:
                 direction_vector = np.array([np.cos(robot_yaw), np.sin(robot_yaw), 0])
                 robot_position = robot_position + robot_speed * direction_vector * time_step
-                robot_yaw = robot_yaw + random.uniform(-math.pi / 10, math.pi / 10)
+                robot_yaw = robot_yaw + random.uniform(-math.pi / 6, math.pi / 6)
                     
                 robot_positions.append(robot_position)
                 robot_yaws.append(robot_yaw)
@@ -473,11 +475,13 @@ class TerrainGenerator():
                     time_index
                     ):
 
-        
         points = point_cloud
-        min_coords = points.min(axis=0)
-        max_coords = points.max(axis=0)
-        points_normalized = (points - min_coords) / (max_coords - min_coords + 1e-15)
+        min_coord = points.min(axis=0)
+        width = points[:, 0].max() - points[:, 0].min()
+        depth = points[:, 1].max() - points[:, 1].min()
+        height = points[:, 2].max() - points[:, 2].min()
+        detection_range = max(width, depth, height)
+        points_normalized = (points - min_coord) / (detection_range + 1e-15)
         points_scaled = voxel_resolution * points_normalized
 
         voxel_indices = np.floor(points_scaled).astype(np.int32)
