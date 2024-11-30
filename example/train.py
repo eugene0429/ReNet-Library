@@ -62,11 +62,9 @@ def main():
                 optimizer=optimizer,
                 scheduler=scheduler,
                 num_epochs=num_epochs,
+                model_path=model_path,
                 check_progress=True
-                )
-
-    torch.save(model.state_dict(), model_path)
-    print(f"Model parameters saved to {model_path}")
+                )    
 
 if __name__ == "__main__":
     main()
