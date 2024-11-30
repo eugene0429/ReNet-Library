@@ -16,11 +16,11 @@ Features
 
 - terrain point clould & voxel data **around a robot position**
 
-    <img width="300" alt="스크린샷 2024-11-09 오전 12 06 13" src="https://github.com/user-attachments/assets/c4d13901-5109-48cb-8d8b-51adbaff49e0">
+    <img width="300" alt="Figure_1" src="https://github.com/user-attachments/assets/6038ae1b-c14e-4307-9261-aa9f03c59ab9"> <img width="300" alt="Figure_2" src="https://github.com/user-attachments/assets/72990891-9838-4e24-9c3b-a00e95766476">
 
 - terrain point cloud & voxel data **detected by sansors on a robot** (noisy, blinded)
 
-  <img width="300" alt="스크린샷 2024-11-09 오전 12 07 03" src="https://github.com/user-attachments/assets/f4d75f0e-f2e0-4940-98ee-747c740903c1"> <img width="290" alt="스크린샷 2024-11-09 오전 12 08 11" src="https://github.com/user-attachments/assets/e92daf55-d047-46b1-9e6f-4373c2f584f1">
+  <img width="300" alt="Figure_3" src="https://github.com/user-attachments/assets/1f20e9a5-6d32-4d13-a8d4-d04f4beb172f"> <img width="300" alt="Figure_4" src="https://github.com/user-attachments/assets/9ad30a11-eb5e-43d7-8724-370dc0159ce3">
 
 - point cloud & voxel data Visualizer
 

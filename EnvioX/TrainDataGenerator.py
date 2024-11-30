@@ -10,6 +10,7 @@ def generate_dataset(grid_size,
                      robot_speed,
                      sensor_config,
                      point_density,
+                     objects_config,
                      num_env_configs,
                      num_robot_per_env,
                      num_time_steps,
@@ -21,6 +22,9 @@ def generate_dataset(grid_size,
 
     env_configs = TG.generate_env_configs(grid_size,
                                           point_density,
+                                          objects_config['num_boxes_range'],
+                                          objects_config['num_pillars_range'],
+                                          objects_config['num_walls_range'],
                                           num_env_configs
                                           )
     

@@ -9,6 +9,9 @@ class Visualizer():
     
     @staticmethod
     def visualize_pc(point_cloud):
+
+        if torch.is_tensor(point_cloud):
+            point_cloud = point_cloud.cpu().numpy()
         
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -106,7 +109,14 @@ class Visualizer():
                                data_index
                                ):
 
-        model.load_state_dict(torch.load(model_path))
+        if torch.cuda.is_available():
+            device = 'cuda'
+            model.load_state_dict(torch.load(model_path))
+        else:
+            device = 'cpu'
+            model.load_state_dict(torch.load(model_path,
+                                             map_location=device))
+        
         model.eval()
 
         input_path = os.path.join(data_path, f'inputs/input_{data_index}.json')
@@ -128,16 +138,27 @@ class Visualizer():
 
         coords, feats = ME.utils.sparse_collate([coords], [feats])
 
-        if torch.cuda.is_available():
-            device = 'cuda'
-        else:
-            device = 'cpu'
-
         input = ME.SparseTensor(features=feats, coordinates=coords, device=device)
 
         with torch.no_grad():
             model = model.to(device)
             output, _ = model(input)
 
-        Visualizer.visualize_sparse_tensor(output, 64)
-        Visualizer.visualize_voxel(coords0_t, 64)
+        coords0_i = coords0_i.cpu().numpy()
+        coords0_t = coords0_t.cpu().numpy()
+        coords_o = output.C.cpu().numpy()
+        coords_o = coords_o[:, 1:]
+
+        detection_range1 = coords0_t[:, 0].max() - coords0_t[:, 0].min()
+        dummy_point1 = [0, 0, detection_range1, 0]
+        detection_range2 = coords_o[:, 0].max()
+        dummy_point2 = [detection_range2, detection_range2, detection_range2]
+
+        coords0_i = np.vstack([coords0_i, dummy_point1])
+        coords0_t = np.vstack([coords0_t, dummy_point1])
+        coords_o = np.vstack([coords_o, dummy_point2])
+
+        Visualizer.visualize_pc(coords0_i)
+        Visualizer.visualize_pc(coords0_t)
+        Visualizer.visualize_pc(coords_o)
+        

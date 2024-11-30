@@ -18,6 +18,10 @@ sensor_config = {'tilt_angle': 30,
                                        'left': [0.0, 0.2, 0.0]}
                  }
 point_density = 15
+objects_config = {'num_boxes_range': [20, 40],
+                  'num_pillars_range': [10, 20],
+                  'num_walls_range': [5, 10]
+                  }
 num_env_configs = 2
 num_robot_per_env = 10
 num_time_steps = 2
@@ -51,6 +55,7 @@ def main():
                          robot_speed,
                          sensor_config,
                          point_density,
+                         objects_config,
                          num_env_configs,
                          round(num_robot_per_env * ratio),
                          num_time_steps,

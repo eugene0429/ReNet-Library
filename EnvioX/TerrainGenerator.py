@@ -56,22 +56,38 @@ def _generate_multiple_boxes(num_boxes,
 
     all_points = []
 
-    for _ in range(num_boxes):
+    positions = []
+    max_attempts = 1000
+    attempts = 0
+
+    while len(positions) < num_boxes and attempts < max_attempts:
+
+        new_position = np.random.uniform(-(grid_size/ 2 - 1.5), grid_size / 2 - 1.5, 2)
+
         width = np.random.uniform(0.2, 2.0)
         length = np.random.uniform(0.2, 2.0)
         height = np.random.uniform(0.08, 0.25)
+        
+        intersects = False
+        for pos in positions:
+            distance = np.sqrt((new_position[0] - pos[0])**2 + (new_position[1] - pos[1])**2)
+            if distance < 3:
+                intersects = True
+                break
+        
+        if not intersects:
+            positions.append(new_position)
 
-        center = np.random.uniform(-(grid_size / 2- 1), grid_size / 2 - 1, 2)
-
-        points = _generate_box_point_cloud(center,
-                                           width,
-                                           length,
-                                           height,
-                                           point_density,
-                                           mode=1
-                                           )
-
-        all_points.append(points)
+            points = _generate_box_point_cloud(new_position,
+                                               width,
+                                               length,
+                                               height,
+                                               point_density,
+                                               mode=1
+                                               )
+            all_points.append(points)
+        
+        attempts += 1
 
     return np.vstack(all_points)
 
@@ -79,25 +95,40 @@ def _generate_multiple_pillars(num_pillars,
                                grid_size,
                                point_density
                                ):
-
     all_points = []
 
-    for _ in range(num_pillars):
+    positions = []
+    max_attempts = 1000
+    attempts = 0
+
+    while len(positions) < num_pillars and attempts < max_attempts:
+
+        new_position = np.random.uniform(-(grid_size/ 2 - 1), grid_size / 2 - 1, 2)
+
         width = np.random.uniform(0.2, 1)
         length = np.random.uniform(0.2, 1)
         height = 4
+        
+        intersects = False
+        for pos in positions:
+            distance = np.sqrt((new_position[0] - pos[0])**2 + (new_position[1] - pos[1])**2)
+            if distance < 3:
+                intersects = True
+                break
+        
+        if not intersects:
+            positions.append(new_position)
 
-        center = np.random.uniform(-(grid_size / 2 - 1), grid_size / 2 - 1, 2)
-
-        points = _generate_box_point_cloud(center,
-                                           width,
-                                           length,
-                                           height,
-                                           point_density,
-                                           mode=2
-                                           )
-
-        all_points.append(points)
+            points = _generate_box_point_cloud(new_position,
+                                               width,
+                                               length,
+                                               height,
+                                               point_density,
+                                               mode=2
+                                               )
+            all_points.append(points)
+        
+        attempts += 1
 
     return np.vstack(all_points)
 
@@ -108,23 +139,38 @@ def _generate_multiple_walls(num_walls,
 
     all_points = []
 
-    for _ in range(num_walls):
+    positions = []
+    max_attempts = 1000
+    attempts = 0
+
+    while len(positions) < num_walls and attempts < max_attempts:
+
+        new_position = np.random.uniform(-(grid_size/ 2 - 5), grid_size / 2 - 5, 2)
 
         width = np.random.uniform(0.2, 0.5)
-        length = np.random.uniform(6, 10)
+        length = np.random.uniform(5, 8)
         height = 4
+        
+        intersects = False
+        for pos in positions:
+            distance = np.sqrt((new_position[0] - pos[0])**2 + (new_position[1] - pos[1])**2)
+            if distance < 8:
+                intersects = True
+                break
+        
+        if not intersects:
+            positions.append(new_position)
 
-        center = np.random.uniform(-(grid_size / 2 - 5), grid_size / 2 - 5, 2)
-
-        points = _generate_box_point_cloud(center,
-                                           width,
-                                           length,
-                                           height,
-                                           point_density,
-                                           mode=3
-                                           )
-
-        all_points.append(points)
+            points = _generate_box_point_cloud(new_position,
+                                               width,
+                                               length,
+                                               height,
+                                               point_density,
+                                               mode=3
+                                               )
+            all_points.append(points)
+        
+        attempts += 1
 
     return np.vstack(all_points)
 
@@ -330,15 +376,18 @@ class TerrainGenerator():
     @staticmethod
     def generate_env_configs(grid_size,
                              point_density,
+                             num_boxes_range,
+                             num_pillars_range,
+                             num_walls_range,
                              num_env_configs
                              ):
 
         env_configs = []
 
         for i in range(num_env_configs):
-            num_boxes = random.randint(20, 40)
-            num_pillars = random.randint(8, 16)
-            num_walls = random.randint(4, 8)
+            num_boxes = random.randint(num_boxes_range[0], num_boxes_range[1])
+            num_pillars = random.randint(num_pillars_range[0], num_pillars_range[1])
+            num_walls = random.randint(num_walls_range[0], num_walls_range[1])
             env_config = {'grid_size': grid_size, 
                           'num_obstacles': {'num_boxes': num_boxes, 
                                             'num_pillars': num_pillars, 
@@ -357,8 +406,10 @@ class TerrainGenerator():
                                num_time_steps,
                                time_step
                                ):
-        
-        range_value = grid_size / 2 - detection_range / 2 - num_time_steps*time_step*robot_speed
+        if time_step != None:
+            range_value = grid_size / 2 - detection_range / 2 - num_time_steps*time_step*robot_speed
+        else:
+            range_value = grid_size / 2 - detection_range / 2
 
         robot_positions = []
         robot_yaws = []
