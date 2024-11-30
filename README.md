@@ -59,3 +59,8 @@ from ReNet.TrainHelper import ReNetDataset, ReNet_collate_fn_train, ReNet_train
 
 Please refer to Example for more detail about how to use specific functions.
 
+For Colab user
+-
+
+Refer to [ReNet.ipynb](https://colab.research.google.com/drive/15NKy6zd6vTYhXXXuDpYYWh2dAgMrxGkp?usp=sharing). This notebook file contains from setting environments for `MinkowskiEngine` to data generation, train, validation and test.
+
