@@ -37,7 +37,7 @@ optimizer = optim.Adam(model.parameters(), lr=lr_i)
 gamma = (lr_f / lr_i) ** (1 / num_epochs)  
 scheduler = ExponentialLR(optimizer, gamma=gamma)
 
-model_path = "best_ReNet.pth"
+model_path = ""
 train_data_path = "data/train"
 
 def main():

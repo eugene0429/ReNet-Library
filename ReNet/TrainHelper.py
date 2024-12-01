@@ -180,14 +180,14 @@ def ReNet_train(model,
             batch_index += 1
             
         epoch_loss = running_loss / len(dataloader)
-
-        model_path_ = os.path.join(model_path, f"ReNet_{epoch_loss}.pth")
-        torch.save_state_dict(model, model_path_)
-        print(f"Model parameters saved to {model_path_}")
         
         print("-----------------------------------------")
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss}")
         print("-----------------------------------------")
+
+        model_path_ = os.path.join(model_path, f"ReNet_{epoch_loss}.pth")
+        torch.save(model.state_dict(), model_path_)
+        print(f"Model parameters saved to {model_path_}")
 
         scheduler.step()
 
