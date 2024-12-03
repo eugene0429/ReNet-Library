@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
-import torch
+import os
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
@@ -37,7 +37,9 @@ optimizer = optim.Adam(model.parameters(), lr=lr_i)
 gamma = (lr_f / lr_i) ** (1 / num_epochs)  
 scheduler = ExponentialLR(optimizer, gamma=gamma)
 
-model_path = ""
+model_path = "model"
+os.makedirs(model_path, exist_ok=True)
+
 train_data_path = "data/train"
 
 def main():
