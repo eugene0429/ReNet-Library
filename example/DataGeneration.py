@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
 import os
-from EnvioX.TrainDataGenerator import generate_dataset # type: ignore
+import EnvioX
 
 grid_size = 20
 detection_range = 3.2
@@ -49,21 +49,21 @@ def main():
 
     for type, path, ratio in data_config:
 
-        generate_dataset(grid_size,
-                         detection_range,
-                         robot_size,
-                         robot_speed,
-                         sensor_config,
-                         point_density,
-                         objects_config,
-                         num_env_configs,
-                         round(num_robot_per_env * ratio),
-                         num_time_steps,
-                         time_step_size,
-                         model_mode,
-                         path,
-                         type
-                         )
+        EnvioX.generate_dataset(grid_size,
+                                detection_range,
+                                robot_size,
+                                robot_speed,
+                                sensor_config,
+                                point_density,
+                                objects_config,
+                                num_env_configs,
+                                round(num_robot_per_env * ratio),
+                                num_time_steps,
+                                time_step_size,
+                                model_mode,
+                                path,
+                                type
+                                )
     
     print("-----------------------------------------")
     print("           Data is generated             ")

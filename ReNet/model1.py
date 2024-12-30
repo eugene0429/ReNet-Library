@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
-from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP # type: ignore
+import EnvioX
 
 class PruningLayer(ME.MinkowskiNetwork):
     def __init__(self, in_channels, D, alpha):
@@ -101,7 +101,7 @@ class EncoderBox(ME.MinkowskiNetwork):
         skip = self.conv(x)
         x = self.down_conv(skip)
         if check:
-            SP.print_sparse_tensor_num_coords_and_shape(x)
+            EnvioX.SP.print_sparse_tensor_num_coords_and_shape(x)
         return skip, x
 
 class Bridge(ME.MinkowskiNetwork):
@@ -114,7 +114,7 @@ class Bridge(ME.MinkowskiNetwork):
         x = self.conv(x)
         x = self.up_conv(x)
         if check:
-            SP.print_sparse_tensor_num_coords_and_shape(x)
+            EnvioX.SP.print_sparse_tensor_num_coords_and_shape(x)
         return x
 
 class DecoderBox(ME.MinkowskiNetwork):
@@ -126,12 +126,12 @@ class DecoderBox(ME.MinkowskiNetwork):
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
-        x = SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = EnvioX.SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv(x)
         x, lh = self.pruning(x)
         x = self.up_conv(x)
         if check:
-            SP.print_sparse_tensor_num_coords_and_shape(x)
+            EnvioX.SP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
 class FinalDecoderBox1(ME.MinkowskiNetwork):
@@ -143,12 +143,12 @@ class FinalDecoderBox1(ME.MinkowskiNetwork):
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
-        x = SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = EnvioX.SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
         x, lh = self.pruning(x)
         x = self.conv2(x)
         if check:
-            SP.print_sparse_tensor_num_coords_and_shape(x)
+            EnvioX.SP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
     
 class FinalDecoderBox2(ME.MinkowskiNetwork):
@@ -160,13 +160,13 @@ class FinalDecoderBox2(ME.MinkowskiNetwork):
         self.stride = stride
 
     def forward(self, x, skip_connection, check):
-        x = SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
+        x = EnvioX.SP.concatenate_sparse_tensors(x, skip_connection, self.stride)
         x = self.conv1(x)
         x, lh = self.pruning(x)
-        x = SP.concatenate_over_time_dimension(x)
+        x = EnvioX.SP.concatenate_over_time_dimension(x)
         x = self.conv2(x)
         if check:
-            SP.print_sparse_tensor_num_coords_and_shape(x)
+            EnvioX.SP.print_sparse_tensor_num_coords_and_shape(x)
         return lh, x
 
 class ReNet(ME.MinkowskiNetwork):

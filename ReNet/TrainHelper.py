@@ -8,8 +8,7 @@ import torch
 import torch.nn as nn
 import MinkowskiEngine as ME
 from torch.utils.data import Dataset
-from EnvioX.TerrainGenerator import TerrainGenerator as TG # type: ignore
-from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP # type: ignore
+import EnvioX
 
 class ReNetDataset(Dataset):
 
@@ -51,7 +50,7 @@ class ReNetDataset(Dataset):
                                        coordinates=coords0_t.to(device),
                                        device=device
                                        )
-        final_target = SP.sparse_to_dense_with_size(final_target, 64)
+        final_target = EnvioX.SP.sparse_to_dense_with_size(final_target, 64)
         final_target = final_target.squeeze()
 
         if self.type == 'train':
@@ -145,7 +144,7 @@ def ReNet_train(model,
                                          )
             
             final_output, output_list = model(input_data)
-            final_output = SP.sparse_to_dense_with_size(final_output, 64)
+            final_output = EnvioX.SP.sparse_to_dense_with_size(final_output, 64)
             final_output = final_output.squeeze()
                 
             med_loss = euclidean_loss_fn(final_output, final_target)
@@ -154,7 +153,7 @@ def ReNet_train(model,
 
             for output, target in zip(output_list,target_list):
                 output, _, _ = output.dense()
-                output = SP.dense_to_sparse(output)
+                output = EnvioX.SP.dense_to_sparse(output)
                 b = output.C[:, 0].long()
                 x = output.C[:, 1].long()
                 y = output.C[:, 2].long()

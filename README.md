@@ -47,14 +47,8 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
-from EnvioX.TrainDataGenerator import generate_dataset
-from EnvioX.TerrainGenerator import TerrainGenerator as TG
-from EnvioX.SparseTensorProcessor import SparseTensorProcessor as SP
-from EnvioX.Visualizer import Visualizer
-from ReNet.model1 import ReNet as ReNet1
-from ReNet.model2 import ReNet as ReNet2
-from ReNet.TrainHelper import ReNetDataset, ReNet_collate_fn_train, ReNet_train
-
+import EnvioX
+import ReNet
 ```
 
 Please refer to Example for more detail about how to use specific functions.

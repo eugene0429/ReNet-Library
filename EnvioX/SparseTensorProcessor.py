@@ -247,8 +247,9 @@ class SparseTensorProcessor():
         sorted_feats2 = feats2[sorted_indices2]
 
         return np.array_equal(sorted_feats1, sorted_feats2), np.array_equal(sorted_coords1, sorted_coords2)
-
-    def create_random_sparse_tensor(self, len, size, num_feature, dimension, stride=1):
+    
+    @staticmethod
+    def create_random_sparse_tensor(len, size, num_feature, dimension, stride=1):
 
         if dimension==3.5:
             coords = torch.randint(0, size, (len, 3))

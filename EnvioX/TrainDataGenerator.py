@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from .TerrainGenerator import TerrainGenerator as TG
 import json
 import os
