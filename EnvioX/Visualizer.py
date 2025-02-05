@@ -77,7 +77,27 @@ class Visualizer():
         return True
     
     @staticmethod
-    def visualize_json(file_path):
+    def visualize_pc_json(file_path):
+        
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+        point_cloud = np.array(data)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        ax.scatter(point_cloud[:,0], point_cloud[:,1], point_cloud[:,2], c=point_cloud[:,2], cmap='viridis', s=1)
+
+        ax.grid(False)
+        ax.axis('off')
+
+        plt.show()
+
+        return True
+    
+    @staticmethod
+    def visualize_voxel_json(file_path):
         
         with open(file_path, 'r') as f:
             data = json.load(f)
@@ -101,6 +121,8 @@ class Visualizer():
         ax.axis('off')
 
         plt.show()
+
+        return True
 
     @staticmethod
     def visualize_model_result(model,
@@ -161,4 +183,6 @@ class Visualizer():
         Visualizer.visualize_pc(coords0_i)
         Visualizer.visualize_pc(coords0_t)
         Visualizer.visualize_pc(coords_o)
+
+        return True
         
